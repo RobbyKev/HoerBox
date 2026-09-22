@@ -611,7 +611,7 @@ form.addEventListener('submit',async e=>{
         const res=await spFillArtist(t.id,ae.id);
         doneMsg=res.added?`${res.added} Alben hinzugefügt.`:(res.found?`Alle ${res.found} Alben liegen schon im Ordner.`:'Spotify führt bei diesem Künstler keine Alben.');
       }
-      catch(err){doneMsg='Die Alben konnten nicht geladen werden.'}
+      catch(err){doneMsg='Die Alben konnten nicht geladen werden'+(err&&err.code?` (Fehler ${err.code})`:'')+'.'}
     }else doneMsg='Ordner gespeichert. Automatisch füllen geht nur mit einem Künstler-Link.';
   }
   if(editing.removed.length)delete pos[t.id];
@@ -833,9 +833,31 @@ async function spAlbums(artistId,groups){
   }
   return all;
 }
+async function spSearchAlbums(name,artistId){
+  const out=[],seen=new Set(),low=String(name).toLowerCase();
+  for(let off=0;off<200;off+=10){
+    let r=null;
+    try{r=await sp(`/search?q=${encodeURIComponent('artist:"'+name+'"')}&type=album&limit=10&offset=${off}&market=${MARKET}`)}catch(e){break}
+    const items=((r&&r.albums&&r.albums.items)||[]).filter(Boolean);
+    if(!items.length)break;
+    for(const a of items){
+      if(seen.has(a.id))continue;seen.add(a.id);
+      if((a.artists||[]).some(x=>x.id===artistId||String(x.name).toLowerCase()===low))out.push(a);
+    }
+    if(!(r.albums&&r.albums.next))break;
+  }
+  return out;
+}
 async function spFillArtist(folderId,artistId){
-  let all=await spAlbums(artistId,'album,single,compilation');
-  if(!all.length)all=await spAlbums(artistId,'appears_on');
+  let all=[],lastErr=null;
+  try{all=await spAlbums(artistId,'album,single,compilation')}catch(e){lastErr=e}
+  if(!all.length){try{all=await spAlbums(artistId,'appears_on')}catch(e){lastErr=e}}
+  if(!all.length){
+    let name='';
+    try{name=((await sp('/artists/'+artistId))||{}).name||''}catch(e){lastErr=e}
+    if(name)all=await spSearchAlbums(name,artistId);
+  }
+  if(!all.length&&lastErr)throw lastErr;
   const inFolder=tiles.filter(x=>x.parent===folderId);
   const haveIds=new Set(inFolder.map(x=>(spotEmbed(x.url)||{}).id));
   const haveNames=new Set(inFolder.map(x=>String(x.name).toLowerCase()));
