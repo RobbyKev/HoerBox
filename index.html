@@ -609,7 +609,7 @@ form.addEventListener('submit',async e=>{
       $('saveBtn').textContent='Lädt Alben …';
       try{
         const res=await spFillArtist(t.id,ae.id);
-        doneMsg=res.added?`${res.added} Alben hinzugefügt.`:(res.found?`Alle ${res.found} Alben liegen schon im Ordner.`:'Spotify führt bei diesem Künstler keine Alben.');
+        doneMsg=res.added?`${res.added} Alben hinzugefügt.${res.found>=MAXALB?' Mehr als 300 gehen nicht auf einmal, einfach nochmal speichern.':''}`:(res.found?`Alle ${res.found} Alben liegen schon im Ordner.`:'Spotify führt bei diesem Künstler keine Alben.');
       }
       catch(err){doneMsg='Die Alben konnten nicht geladen werden'+(err&&err.code?` (Fehler ${err.code})`:'')+'.'}
     }else doneMsg='Ordner gespeichert. Automatisch füllen geht nur mit einem Künstler-Link.';
@@ -821,21 +821,29 @@ function spWake(t,opts){
   $('sFrame').innerHTML='<p class="slist-msg">iOS hat Spotify im Hintergrund schlafen gelegt. Einmal kurz öffnen und direkt zurück zur Hörbox wechseln, dann startet es von selbst.</p><button type="button" class="epcont" id="wakeBtn">Spotify öffnen</button>';
   $('wakeBtn').onclick=()=>{location.href='spotify://'};
 }
+const MAXALB=300;
+const pause=ms=>new Promise(res=>setTimeout(res,ms));
 const MARKET=((navigator.language||'de-DE').split('-')[1]||'DE').toUpperCase();
 async function spAlbums(artistId,groups){
   let url=`/artists/${artistId}/albums?include_groups=${groups}&limit=50&market=${MARKET}`,all=[],pages=0;
-  while(url&&pages<40){
+  while(url&&pages<40&&all.length<MAXALB){
     let r;
     try{r=await sp(url)}
-    catch(e){if(e.code===400&&url.includes('limit=50')){url=url.replace('limit=50','limit=10');continue}throw e}
+    catch(e){
+      if(e.code===400&&url.includes('limit=50')){url=url.replace('limit=50','limit=10');continue}
+      if(e.code===429&&all.length)break;
+      throw e;
+    }
     all.push(...((r&&r.items)||[]).filter(Boolean));
     url=r&&r.next?r.next.replace('https://api.spotify.com/v1',''):null;pages++;
+    if(url)await pause(150);
   }
   return all;
 }
 async function spSearchAlbums(name,artistId){
   const out=[],seen=new Set(),low=String(name).toLowerCase();
   for(let off=0;off<200;off+=10){
+    if(out.length>=MAXALB)break;
     let r=null;
     try{r=await sp(`/search?q=${encodeURIComponent('artist:"'+name+'"')}&type=album&limit=10&offset=${off}&market=${MARKET}`)}catch(e){break}
     const items=((r&&r.albums&&r.albums.items)||[]).filter(Boolean);
@@ -845,6 +853,7 @@ async function spSearchAlbums(name,artistId){
       if((a.artists||[]).some(x=>x.id===artistId||String(x.name).toLowerCase()===low))out.push(a);
     }
     if(!(r.albums&&r.albums.next))break;
+    await pause(150);
   }
   return out;
 }
