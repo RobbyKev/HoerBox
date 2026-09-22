@@ -106,7 +106,7 @@ input[type=text],input[type=url]{
 .swatches span{display:block;width:40px;height:40px;border-radius:50%;background:var(--s);border:3px solid transparent;cursor:pointer}
 .swatches input:checked + span{border-color:var(--ink);box-shadow:inset 0 0 0 3px #fff}
 .swatches input:focus-visible + span{outline:4px solid #FFC53D;outline-offset:2px}
-.seg{display:grid;grid-template-columns:1fr 1fr 1fr;background:#EEF0F8;border-radius:14px;padding:4px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:#EEF0F8;border-radius:14px;padding:4px}
 .seg input{position:absolute;opacity:0;pointer-events:none}
 .seg span{display:block;text-align:center;padding:8px 6px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;line-height:1.2}
 .seg input:checked + span{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -139,6 +139,15 @@ body.spotify-open #player{display:none}
 .tile.cover .emoji{display:none}
 .tile.cover .name{display:none}
 .tile.cover .waves{background:rgba(255,255,255,.93);padding:4px 5px;border-radius:8px;height:30px;box-sizing:border-box}
+.tile.folder{box-shadow:0 7px 0 rgba(0,0,0,.28),9px -9px 0 -3px rgba(255,255,255,.45),17px -17px 0 -7px rgba(255,255,255,.25)}
+.tile.folder.playing{box-shadow:0 7px 0 rgba(0,0,0,.28),0 0 0 6px var(--paper)}
+.count{position:absolute;right:10px;bottom:10px;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:var(--paper);color:var(--ink);font-weight:800;font-size:16px;display:grid;place-items:center;box-shadow:0 2px 0 rgba(0,0,0,.2)}
+.badge{cursor:pointer}
+.hleft{display:flex;align-items:center;gap:12px;min-width:0}
+.hleft h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#backBtn{border:0;border-radius:999px;background:var(--paper);color:var(--ink);font-weight:800;font-size:18px;padding:8px 18px 8px 14px;flex:none}
+#backBtn[hidden]{display:none}
+select{font:inherit;font-weight:500;font-size:18px;padding:10px 14px;border-radius:14px;border:2px solid var(--line);color:var(--ink);background:#fff;width:100%}
 .spot{position:absolute;left:10px;top:10px;width:24px;height:24px;box-shadow:0 1px 3px rgba(0,0,0,.3);border-radius:50%;background:#1DB954;display:grid;place-items:center}
 .spot svg{width:16px;height:16px;fill:#fff}
 #toast{
@@ -157,7 +166,7 @@ body.spotify-open #player{display:none}
 </head>
 <body>
 <header>
-  <h1>Hörbox</h1>
+  <div class="hleft"><button id="backBtn" type="button" hidden>‹ Zurück</button><h1 id="hTitle">Hörbox</h1></div>
   <button id="editBtn" type="button" aria-label="Bearbeiten (gedrückt halten)"><span>Bearbeiten</span></button>
 </header>
 <main>
@@ -199,6 +208,7 @@ body.spotify-open #player{display:none}
       <label><input type="radio" name="kind" value="link"><span>Link<br>Webradio oder MP3</span></label>
       <label><input type="radio" name="kind" value="files"><span>Dateien<br>vom Gerät</span></label>
       <label><input type="radio" name="kind" value="spotify"><span>Spotify<br>Album, Playlist</span></label>
+      <label><input type="radio" name="kind" value="folder"><span>Ordner<br>für mehrere Kacheln</span></label>
     </div>
     <div id="linkPart">
       <label class="f">Adresse<input type="url" name="url" inputmode="url" autocomplete="off" placeholder="https://…"></label>
@@ -208,6 +218,11 @@ body.spotify-open #player{display:none}
       <label class="f">Spotify-Link<input type="text" name="spotify" inputmode="url" autocomplete="off" placeholder="Link oder Einbettungs-Code"></label>
       <p class="hint">In Spotify auf Teilen → Link kopieren, oder den Einbettungs-Code einfügen. Das Cover wird automatisch übernommen, der Name auch, wenn du keinen einträgst. Volle Titel gibt es nur, wenn in diesem Browser jemand bei Spotify eingeloggt ist, sonst 30-Sekunden-Vorschauen.</p>
     </div>
+    <div id="folderPart" hidden>
+      <label class="f">Spotify-Link fürs Cover (optional)<input type="text" name="fspot" inputmode="url" autocomplete="off" placeholder="z. B. Künstler-Link"></label>
+      <p class="hint">Cover und Name werden vom Link übernommen. Die einzelnen Alben legst du danach im Ordner als eigene Kacheln an.</p>
+    </div>
+    <label class="f" id="parentWrap" hidden>Liegt in<select name="parent"></select></label>
     <div id="filesPart" hidden>
       <label class="f">MP3s hinzufügen<input type="file" name="files" accept="audio/*" multiple></label>
       <ul class="filelist" id="fileList"></ul>
@@ -241,7 +256,7 @@ const audio=new Audio(); audio.preload='auto';
 
 let tiles=loadJSON('hoerbox.tiles',[]);
 let pos=loadJSON('hoerbox.pos',{});
-let spotId=null, editMode=false, cur=null, objUrl=null, editing=null, isNew=false;
+let folder=null, spotId=null, editMode=false, cur=null, objUrl=null, editing=null, isNew=false;
 
 function loadJSON(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v??d}catch(e){return d}}
 function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('Speichern hat nicht geklappt. Der Gerätespeicher ist evtl. voll.')}}
@@ -275,16 +290,27 @@ const delFile=id=>idb('readwrite',st=>st.delete(id));
 /* Kacheln */
 function renderGrid(){
   grid.innerHTML='';
+  if(folder&&!tiles.some(x=>x.id===folder))folder=null;
+  const f=folder?tiles.find(x=>x.id===folder):null;
+  $('backBtn').hidden=!f;$('hTitle').textContent=f?f.name:'Hörbox';
   const playingId=spotId||(cur&&!audio.paused?cur.tile.id:null);
-  tiles.forEach(t=>{
+  const playingParent=(tiles.find(x=>x.id===playingId)||{}).parent||null;
+  const list=tiles.filter(t=>(t.parent||null)===folder);
+  list.forEach(t=>{
     const b=document.createElement('button');
-    b.type='button';b.className='tile'+(t.id===playingId?' playing':'');
+    const isF=t.kind==='folder';
+    b.type='button';b.className='tile'+(isF?' folder':'')+(t.id===playingId||t.id===playingParent?' playing':'');
     b.style.setProperty('--c',t.color);
     const pic=t.img||t.cover;
     if(pic){b.classList.add('cover');b.style.backgroundImage=`url("${String(pic).replace(/["\\)]/g,'')}")`}
-    b.innerHTML=`<span class="emoji" aria-hidden="true">${esc(t.emoji)}</span><span class="name">${esc(t.name)}</span><span class="waves" aria-hidden="true"><i></i><i></i><i></i></span>`+(t.kind==='spotify'?`<span class="spot" aria-hidden="true">${SPOT_ICON}</span>`:'')+(editMode?'<span class="badge" aria-hidden="true">✎</span>':'');
-    b.setAttribute('aria-label',(editMode?'Bearbeiten: ':'')+t.name);
-    b.onclick=()=>editMode?openEditor(t):playTile(t);
+    const n=isF?tiles.filter(x=>x.parent===t.id).length:0;
+    b.innerHTML=`<span class="emoji" aria-hidden="true">${esc(t.emoji)}</span><span class="name">${esc(t.name)}</span><span class="waves" aria-hidden="true"><i></i><i></i><i></i></span>`+(t.kind==='spotify'?`<span class="spot" aria-hidden="true">${SPOT_ICON}</span>`:'')+(isF?`<span class="count" aria-hidden="true">${n}</span>`:'')+(editMode?'<span class="badge" role="button" aria-label="Bearbeiten">✎</span>':'');
+    b.setAttribute('aria-label',(isF?'Ordner: ':editMode?'Bearbeiten: ':'')+t.name);
+    b.onclick=e=>{
+      if(editMode&&(!isF||e.target.closest('.badge'))){openEditor(t);return}
+      if(isF){folder=t.id;window.scrollTo(0,0);renderGrid();return}
+      playTile(t);
+    };
     grid.append(b);
   });
   if(editMode){
@@ -292,8 +318,10 @@ function renderGrid(){
     a.innerHTML='<span class="emoji" aria-hidden="true">＋</span><span class="name">Neue Kachel</span>';
     a.onclick=()=>openEditor(null);grid.append(a);
   }
-  empty.hidden=!!tiles.length||editMode;
+  empty.hidden=!!list.length||editMode;
+  empty.innerHTML=f?'<strong>Dieser Ordner ist noch leer.</strong>Halte oben rechts „Bearbeiten“ gedrückt und lege hier Kacheln an.':'<strong>Noch leer hier.</strong>Halte oben rechts „Bearbeiten“ gedrückt und füge Webradio oder MP3s hinzu.';
 }
+$('backBtn').onclick=()=>{folder=null;renderGrid()};
 
 /* Wiedergabe */
 function savePos(){if(cur&&cur.tile.kind==='files'&&!isNaN(audio.currentTime)){pos[cur.tile.id]={i:cur.index,t:audio.currentTime};saveJSON('hoerbox.pos',pos)}}
@@ -399,7 +427,13 @@ editBtn.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&!editM
 
 /* Editor */
 $('swatches').innerHTML=COLORS.map((c,i)=>`<label><input type="radio" name="color" value="${c}" aria-label="Farbe ${i+1}"><span style="--s:${c}"></span></label>`).join('');
-function showKind(k){$('linkPart').hidden=k!=='link';$('filesPart').hidden=k!=='files';$('spotifyPart').hidden=k!=='spotify'}
+function showKind(k){$('linkPart').hidden=k!=='link';$('filesPart').hidden=k!=='files';$('spotifyPart').hidden=k!=='spotify';$('folderPart').hidden=k!=='folder';
+  const fs=tiles.filter(x=>x.kind==='folder'&&x.id!==editing.id);
+  $('parentWrap').hidden=k==='folder'||!fs.length;
+  const sel=form.elements['parent'];const v=sel.value||editing.parent||'';
+  sel.innerHTML='<option value="">Hauptseite</option>'+fs.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  sel.value=fs.some(x=>x.id===v)?v:'';
+}
 
 form.querySelectorAll('input[name=kind]').forEach(r=>r.addEventListener('change',()=>showKind(r.value)));
 function renderFileList(){
@@ -411,10 +445,10 @@ function renderFileList(){
 form.files.addEventListener('change',renderFileList);
 function openEditor(t){
   isNew=!t;
-  editing=t?JSON.parse(JSON.stringify(t)):{id:uid(),name:'',emoji:'🎵',color:COLORS[tiles.length%COLORS.length],kind:'link',url:'',files:[],names:[]};
+  editing=t?JSON.parse(JSON.stringify(t)):{id:uid(),name:'',emoji:'🎵',color:COLORS[tiles.length%COLORS.length],kind:'link',url:'',files:[],names:[],parent:folder};
   editing.removed=[];
   $('dlgTitle').textContent=isNew?'Neue Kachel':'Kachel bearbeiten';
-  form.elements['name'].value=editing.name;form.emoji.value=editing.emoji;form.url.value=editing.kind==='link'?editing.url||'':'';form.spotify.value=editing.kind==='spotify'?editing.url||'':'';form.files.value='';
+  form.elements['name'].value=editing.name;form.emoji.value=editing.emoji;form.url.value=editing.kind==='link'?editing.url||'':'';form.spotify.value=editing.kind==='spotify'?editing.url||'':'';form.fspot.value=editing.kind==='folder'?editing.url||'':'';form.elements['parent'].value='';form.files.value='';
   form.querySelector(`input[name=color][value="${editing.color}"]`).checked=true;
   form.querySelector(`input[name=kind][value="${editing.kind}"]`).checked=true;
   form.image.value='';showKind(editing.kind);renderFileList();showImg();
@@ -430,13 +464,16 @@ form.addEventListener('submit',async e=>{
   e.preventDefault();
   let name=form.elements['name'].value.trim();
   const kind=form.querySelector('input[name=kind]:checked').value;
-  if(!name&&kind!=='spotify'){toast('Gib der Kachel einen Namen.');form.elements['name'].focus();return}
-  const url=kind==='spotify'?form.spotify.value.trim():form.url.value.trim();
+  const url=kind==='spotify'?form.spotify.value.trim():kind==='folder'?form.fspot.value.trim():form.url.value.trim();
+  const spotLike=kind==='spotify'||(kind==='folder'&&url);
+  if(!name&&!spotLike){toast('Gib der Kachel einen Namen.');form.elements['name'].focus();return}
+  if(kind==='folder'&&url&&!spotEmbed(url)){toast('Das ist kein Spotify-Link.');form.fspot.focus();return}
+  if(editing.kind==='folder'&&kind!=='folder'&&tiles.some(x=>x.parent===editing.id)){toast('Der Ordner enthält noch Kacheln. Verschieb oder lösch sie zuerst.');return}
   if(kind==='spotify'&&!spotEmbed(url)){toast('Das ist kein Spotify-Link für Album, Playlist oder Titel.');form.spotify.focus();return}
   if(kind==='link'&&!/^https?:\/\//i.test(url)){toast('Die Adresse muss mit https:// beginnen.');form.url.focus();return}
   $('saveBtn').disabled=true;$('saveBtn').textContent='Speichert …';
-  let cover=kind==='spotify'&&editing.kind==='spotify'&&spotEmbed(editing.url)?.id===spotEmbed(url)?.id?editing.cover||'':'';
-  if(kind==='spotify'){
+  let cover=spotLike&&spotEmbed(editing.url||'')?.id===spotEmbed(url)?.id?editing.cover||'':'';
+  if(spotLike){
     const meta=await spotMeta(spotEmbed(url));
     if(meta){cover=meta.cover||cover;if(!name)name=meta.title}
     else if(!cover&&!editing.img)toast('Das Cover konnte nicht von Spotify geladen werden. Du kannst oben ein eigenes Bild wählen.');
@@ -451,7 +488,7 @@ form.addEventListener('submit',async e=>{
     toast('Die Dateien konnten nicht gespeichert werden. Der Gerätespeicher ist evtl. voll.');
     $('saveBtn').disabled=false;$('saveBtn').textContent='Speichern';return;
   }
-  const t={id:editing.id,name,emoji:form.emoji.value.trim()||'🎵',color:form.querySelector('input[name=color]:checked').value,kind,url:kind==='spotify'?(()=>{const e=spotEmbed(url);return`https://open.spotify.com/${e.type}/${e.id}`})():url,cover,img:editing.img||'',files:editing.files,names:editing.names};
+  const t={id:editing.id,name,emoji:form.emoji.value.trim()||'🎵',color:form.querySelector('input[name=color]:checked').value,kind,url:spotLike?(()=>{const e=spotEmbed(url);return`https://open.spotify.com/${e.type}/${e.id}`})():url,cover:spotLike?cover:'',img:editing.img||'',files:kind==='files'?editing.files:[],names:kind==='files'?editing.names:[],parent:kind==='folder'?null:(form.elements['parent'].value||(($('parentWrap').hidden)?(editing.parent||null):null))};
   if(isNew)tiles.push(t);else tiles=tiles.map(x=>x.id===t.id?t:x);
   if(editing.removed.length)delete pos[t.id];
   saveJSON('hoerbox.tiles',tiles);saveJSON('hoerbox.pos',pos);
@@ -460,9 +497,14 @@ form.addEventListener('submit',async e=>{
   dlg.close();renderGrid();toast(isNew?'Kachel hinzugefügt.':'Gespeichert.');
 });
 $('delBtn').onclick=async()=>{
-  if(!confirm(`„${editing.name}“ wirklich löschen?`))return;
-  for(const id of [...editing.files,...editing.removed]){try{await delFile(id)}catch(e){}}
-  tiles=tiles.filter(x=>x.id!==editing.id);delete pos[editing.id];
+  const kids=tiles.filter(x=>x.parent===editing.id);
+  if(!confirm(kids.length?`Ordner „${editing.name}“ mit ${kids.length} Kacheln wirklich löschen?`:`„${editing.name}“ wirklich löschen?`))return;
+  for(const t of [editing,...kids])for(const id of [...(t.files||[]),...(t.removed||[])]){try{await delFile(id)}catch(e){}}
+  const gone=new Set([editing.id,...kids.map(k=>k.id)]);
+  if(cur&&gone.has(cur.tile.id)){audio.pause();audio.removeAttribute('src');cur=null;renderPlayer()}
+  if(spotId&&gone.has(spotId))closeSpotify();
+  tiles=tiles.filter(x=>!gone.has(x.id));gone.forEach(id=>delete pos[id]);
+  if(gone.has(folder))folder=null;
   saveJSON('hoerbox.tiles',tiles);saveJSON('hoerbox.pos',pos);
   if(cur&&cur.tile.id===editing.id){audio.pause();audio.removeAttribute('src');cur=null;renderPlayer()}
   if(spotId===editing.id)closeSpotify();
@@ -471,7 +513,7 @@ $('delBtn').onclick=async()=>{
 
 renderGrid();renderPlayer();
 (async()=>{let changed=false;
-  for(const t of tiles){if(t.kind!=='spotify'||t.cover||t.img)continue;const e=spotEmbed(t.url);if(!e)continue;
+  for(const t of tiles){if(!(t.kind==='spotify'||(t.kind==='folder'&&t.url))||t.cover||t.img)continue;const e=spotEmbed(t.url);if(!e)continue;
     const m=await spotMeta(e);if(m&&m.cover){t.cover=m.cover;changed=true}}
   if(changed){saveJSON('hoerbox.tiles',tiles);renderGrid()}
 })();
