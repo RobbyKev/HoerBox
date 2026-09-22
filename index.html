@@ -607,7 +607,10 @@ form.addEventListener('submit',async e=>{
     const ae=spotEmbed(url);
     if(ae&&ae.type==='artist'){
       $('saveBtn').textContent='Lädt Alben …';
-      try{const n=await spFillArtist(t.id,ae.id);doneMsg=n?`${n} Alben hinzugefügt.`:'Keine neuen Alben gefunden.'}
+      try{
+        const res=await spFillArtist(t.id,ae.id);
+        doneMsg=res.added?`${res.added} Alben hinzugefügt.`:(res.found?`Alle ${res.found} Alben liegen schon im Ordner.`:'Spotify führt bei diesem Künstler keine Alben.');
+      }
       catch(err){doneMsg='Die Alben konnten nicht geladen werden.'}
     }else doneMsg='Ordner gespeichert. Automatisch füllen geht nur mit einem Künstler-Link.';
   }
@@ -818,8 +821,9 @@ function spWake(t,opts){
   $('sFrame').innerHTML='<p class="slist-msg">iOS hat Spotify im Hintergrund schlafen gelegt. Einmal kurz öffnen und direkt zurück zur Hörbox wechseln, dann startet es von selbst.</p><button type="button" class="epcont" id="wakeBtn">Spotify öffnen</button>';
   $('wakeBtn').onclick=()=>{location.href='spotify://'};
 }
-async function spFillArtist(folderId,artistId){
-  let url=`/artists/${artistId}/albums?include_groups=album,single,compilation&limit=50&market=from_token`,all=[],pages=0;
+const MARKET=((navigator.language||'de-DE').split('-')[1]||'DE').toUpperCase();
+async function spAlbums(artistId,groups){
+  let url=`/artists/${artistId}/albums?include_groups=${groups}&limit=50&market=${MARKET}`,all=[],pages=0;
   while(url&&pages<40){
     let r;
     try{r=await sp(url)}
@@ -827,6 +831,11 @@ async function spFillArtist(folderId,artistId){
     all.push(...((r&&r.items)||[]).filter(Boolean));
     url=r&&r.next?r.next.replace('https://api.spotify.com/v1',''):null;pages++;
   }
+  return all;
+}
+async function spFillArtist(folderId,artistId){
+  let all=await spAlbums(artistId,'album,single,compilation');
+  if(!all.length)all=await spAlbums(artistId,'appears_on');
   const inFolder=tiles.filter(x=>x.parent===folderId);
   const haveIds=new Set(inFolder.map(x=>(spotEmbed(x.url)||{}).id));
   const haveNames=new Set(inFolder.map(x=>String(x.name).toLowerCase()));
@@ -839,7 +848,7 @@ async function spFillArtist(folderId,artistId){
     tiles.push({id:uid(),name:a.name,emoji:'🎵',color:COLORS[tiles.length%COLORS.length],kind:'spotify',url:`https://open.spotify.com/album/${a.id}`,cover:(a.images&&a.images[0]&&a.images[0].url)||'',img:'',files:[],names:[],parent:folderId});
     n++;
   }
-  return n;
+  return {added:n,found:all.length};
 }
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden)return;
