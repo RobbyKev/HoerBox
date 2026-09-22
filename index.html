@@ -157,7 +157,7 @@ body.editing #tools{display:flex}
 .f textarea{resize:vertical;min-height:52px;font-size:16px;line-height:1.35}
 body.editing .tile:not(.add){touch-action:manipulation}
 .tile.dragging{opacity:.25}
-.ghost{position:fixed;z-index:50;pointer-events:none;margin:0;transform-origin:center;box-shadow:0 18px 30px rgba(0,0,0,.35)!important;opacity:.95}
+.drag-ghost{position:fixed;z-index:50;pointer-events:none;margin:0;transform-origin:center;box-shadow:0 18px 30px rgba(0,0,0,.35)!important;opacity:.95}
 body.dragmode{user-select:none;-webkit-user-select:none}
 #toast{
   position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);
@@ -609,7 +609,7 @@ function dragDown(e,b,t){
 function startDrag(){
   const d=drag;d.active=true;
   const r=d.b.getBoundingClientRect();
-  const g=d.b.cloneNode(true);g.classList.add('ghost');g.classList.remove('playing');
+  const g=d.b.cloneNode(true);g.classList.add('drag-ghost');g.classList.remove('playing');
   Object.assign(g.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
   d.ox=d.sx-r.left;d.oy=d.sy-r.top;d.g=g;document.body.append(g);
   d.b.classList.add('dragging');document.body.classList.add('dragmode');
