@@ -150,6 +150,10 @@ body.spotify-open #player{display:none}
 select{font:inherit;font-weight:500;font-size:18px;padding:10px 14px;border-radius:14px;border:2px solid var(--line);color:var(--ink);background:#fff;width:100%}
 .spot{position:absolute;left:10px;top:10px;width:24px;height:24px;box-shadow:0 1px 3px rgba(0,0,0,.3);border-radius:50%;background:#1DB954;display:grid;place-items:center}
 .spot svg{width:16px;height:16px;fill:#fff}
+#tools{display:none;flex-wrap:wrap;gap:12px;margin-top:28px;padding-top:20px;border-top:2px dashed rgba(255,255,255,.3)}
+body.editing #tools{display:flex}
+#tools button{border:0;border-radius:999px;background:rgba(255,255,255,.16);padding:10px 20px;font-weight:700;font-size:17px}
+#tools p{flex-basis:100%;margin:0;color:var(--soft);font-size:15px;line-height:1.4;max-width:60ch}
 #toast{
   position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);
   background:var(--paper);color:var(--ink);padding:10px 18px;border-radius:16px;font-weight:700;font-size:16px;
@@ -171,6 +175,12 @@ select{font:inherit;font-weight:500;font-size:18px;padding:10px 14px;border-radi
 </header>
 <main>
   <div class="grid" id="grid"></div>
+  <div id="tools">
+    <button type="button" id="exportBtn">Kacheln exportieren</button>
+    <button type="button" id="importBtn">Kacheln importieren</button>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <p>Zum Übertragen auf ein anderes Gerät: hier exportieren, die Datei z. B. per AirDrop schicken und dort importieren. Vorhandene Kacheln bleiben erhalten.</p>
+  </div>
   <div class="empty" id="empty" hidden>
     <strong>Noch leer hier.</strong>
     Halte oben rechts „Bearbeiten“ gedrückt und füge Webradio oder MP3s hinzu.
@@ -510,6 +520,39 @@ $('delBtn').onclick=async()=>{
   if(spotId===editing.id)closeSpotify();
   dlg.close();renderGrid();toast('Kachel gelöscht.');
 };
+
+/* Export / Import */
+const blobToData=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b)});
+$('exportBtn').onclick=async()=>{
+  const fileIds=tiles.flatMap(t=>t.files||[]);
+  let withFiles=false;
+  if(fileIds.length)withFiles=confirm(`Es gibt ${fileIds.length} eigene MP3-Dateien. Sollen die mit exportiert werden?\n\nOK = ja (Datei wird groß)\nAbbrechen = nur Kacheln, Links und Bilder`);
+  const btn=$('exportBtn');btn.disabled=true;btn.textContent='Exportiert …';
+  try{
+    const files={};
+    if(withFiles)for(const id of fileIds){try{const b=await getFile(id);if(b)files[id]=await blobToData(b)}catch(e){}}
+    const data={app:'hoerbox',v:1,date:new Date().toISOString(),tiles:withFiles?tiles:tiles.map(t=>t.kind==='files'?{...t,files:[],names:[]}:t),files};
+    const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`hoerbox-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    toast('Exportiert.');
+  }catch(e){toast('Export hat nicht geklappt.')}
+  btn.disabled=false;btn.textContent='Kacheln exportieren';
+};
+$('importBtn').onclick=()=>$('importFile').click();
+$('importFile').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  let data;try{data=JSON.parse(await f.text())}catch(err){toast('Die Datei ist keine Hörbox-Sicherung.');return}
+  if(!data||data.app!=='hoerbox'||!Array.isArray(data.tiles)){toast('Die Datei ist keine Hörbox-Sicherung.');return}
+  try{
+    for(const[id,url]of Object.entries(data.files||{})){const b=await (await fetch(url)).blob();await putFile(id,b)}
+    const byId=new Map(tiles.map(t=>[t.id,t]));
+    data.tiles.forEach(t=>byId.set(t.id,t));
+    tiles=[...byId.values()];
+    saveJSON('hoerbox.tiles',tiles);folder=null;renderGrid();
+    toast(`${data.tiles.length} Kacheln importiert.`);
+  }catch(err){toast('Import hat nicht geklappt. Der Gerätespeicher ist evtl. voll.')}
+});
 
 renderGrid();renderPlayer();
 (async()=>{let changed=false;
