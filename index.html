@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#3452C2; --bar:#233A95; --paper:#FFFFFF; --ink:#1B1F3B; --soft:#DDE4FF; --line:#E3E6F2;
+  --bg:#3452C2; --bar:#233A95; --fg:#FFFFFF; --pat:none; --paper:#FFFFFF; --ink:#1B1F3B; --soft:#DDE4FF; --line:#E3E6F2;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -23,7 +23,7 @@
 *,*::before,*::after{box-sizing:inherit}
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
 body{
-  margin:0;min-height:100%;background:var(--bg);color:var(--paper);
+  margin:0;min-height:100%;background-color:var(--bg);background-image:var(--pat);background-size:260px 260px;color:var(--fg);transition:background-color .3s;
   font-family:"Baloo 2","Arial Rounded MT Bold",ui-rounded,system-ui,sans-serif;
   -webkit-tap-highlight-color:transparent;
 }
@@ -34,11 +34,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 h1{margin:0;font-size:clamp(30px,6vw,44px);font-weight:800;letter-spacing:-.01em;line-height:1}
 #editBtn{
   position:relative;overflow:hidden;border:0;border-radius:999px;padding:8px 18px;
-  background:rgba(255,255,255,.14);font-weight:700;font-size:17px;
+  background:rgba(255,255,255,.14);background:color-mix(in srgb,var(--fg) 14%,transparent);font-weight:700;font-size:17px;
   -webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation;
 }
 #editBtn span{position:relative}
-#editBtn::before{content:"";position:absolute;inset:0;width:0;background:rgba(255,255,255,.3)}
+#editBtn::before{content:"";position:absolute;inset:0;width:0;background:rgba(255,255,255,.3);background:color-mix(in srgb,var(--fg) 30%,transparent)}
 #editBtn.holding::before{width:100%;transition:width 1.5s linear}
 body.editing #editBtn{background:#FFC53D;color:var(--ink)}
 
@@ -56,7 +56,7 @@ body.has-player main{padding-bottom:150px}
 .tile .emoji{font-size:clamp(46px,9vw,72px);line-height:1.1}
 .tile .name{font-weight:700;font-size:clamp(17px,2.6vw,21px);line-height:1.15;text-align:center;
   overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.tile.playing{box-shadow:0 7px 0 rgba(0,0,0,.28),0 0 0 6px var(--paper)}
+.tile.playing{box-shadow:0 7px 0 rgba(0,0,0,.28),0 0 0 6px var(--fg)}
 .waves{position:absolute;top:14px;right:16px;display:none;gap:3px;align-items:flex-end;height:22px}
 .waves i{display:block;width:5px;border-radius:3px;background:var(--ink);height:40%;animation:wave 1s ease-in-out infinite}
 .waves i:nth-child(2){animation-delay:.2s}.waves i:nth-child(3){animation-delay:.4s}
@@ -64,11 +64,11 @@ body.has-player main{padding-bottom:150px}
 @keyframes wave{0%,100%{height:30%}50%{height:100%}}
 .badge{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;background:var(--paper);
   display:grid;place-items:center;font-size:17px;box-shadow:0 2px 0 rgba(0,0,0,.2)}
-.tile.add{background:transparent;color:var(--paper);border:4px dashed rgba(255,255,255,.55);box-shadow:none}
+.tile.add{background:transparent;color:var(--fg);border:4px dashed rgba(255,255,255,.55);border-color:color-mix(in srgb,var(--fg) 55%,transparent);box-shadow:none}
 .tile.add .emoji{font-size:54px}
 
 .empty{max-width:34ch;margin:12vh auto 0;text-align:center;color:var(--soft);font-size:20px;line-height:1.45}
-.empty strong{display:block;color:var(--paper);font-size:28px;margin-bottom:6px}
+.empty strong{display:block;color:var(--fg);font-size:28px;margin-bottom:6px}
 
 #player{
   position:fixed;left:0;right:0;bottom:0;background:var(--bar);
@@ -80,7 +80,7 @@ body.has-player #player{display:block}
 .pemoji{width:58px;height:58px;flex:none;border-radius:18px;background:var(--c,#FFC53D);display:grid;place-items:center;font-size:34px}
 .ptext{flex:1;min-width:0}
 .ptitle{font-weight:800;font-size:20px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.psub{color:var(--soft);font-size:16px;line-height:1.2}
+.psub{color:rgba(255,255,255,.72);font-size:16px;line-height:1.2}
 .ctrl{display:flex;align-items:center;gap:8px;flex:none}
 .cbtn{border:0;background:rgba(255,255,255,.12);width:52px;height:52px;border-radius:50%;display:grid;place-items:center}
 .cbtn.big{width:68px;height:68px;background:var(--paper);color:var(--ink)}
@@ -126,7 +126,7 @@ input[type=text],input[type=url],textarea{
 .sinner{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
 .shead{display:flex;align-items:center;gap:12px}
 .shead strong{flex:1;min-width:0;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.shead a{color:var(--soft);font-weight:700;font-size:15px}
+.shead a{color:rgba(255,255,255,.72);font-weight:700;font-size:15px}
 .shead button{border:0;border-radius:999px;background:rgba(255,255,255,.14);padding:6px 16px;font-weight:700;font-size:16px}
 #sFrame iframe{display:block;width:100%;height:352px;border:0;border-radius:14px;background:#282828}
 body.spotify-open main{padding-bottom:440px}
@@ -140,7 +140,7 @@ body.spotify-open #player{display:none}
 .tile.cover .name{display:none}
 .tile.cover .waves{background:rgba(255,255,255,.93);padding:4px 5px;border-radius:8px;height:30px;box-sizing:border-box}
 .tile.folder{box-shadow:0 7px 0 rgba(0,0,0,.28),9px -9px 0 -3px rgba(255,255,255,.45),17px -17px 0 -7px rgba(255,255,255,.25)}
-.tile.folder.playing{box-shadow:0 7px 0 rgba(0,0,0,.28),0 0 0 6px var(--paper)}
+.tile.folder.playing{box-shadow:0 7px 0 rgba(0,0,0,.28),0 0 0 6px var(--fg)}
 .count{position:absolute;right:10px;bottom:10px;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:var(--paper);color:var(--ink);font-weight:800;font-size:16px;display:grid;place-items:center;box-shadow:0 2px 0 rgba(0,0,0,.2)}
 .badge{cursor:pointer}
 .hleft{display:flex;align-items:center;gap:12px;min-width:0}
@@ -150,9 +150,14 @@ body.spotify-open #player{display:none}
 select{font:inherit;font-weight:500;font-size:18px;padding:10px 14px;border-radius:14px;border:2px solid var(--line);color:var(--ink);background:#fff;width:100%}
 .spot{position:absolute;left:10px;top:10px;width:24px;height:24px;box-shadow:0 1px 3px rgba(0,0,0,.3);border-radius:50%;background:#1DB954;display:grid;place-items:center}
 .spot svg{width:16px;height:16px;fill:#fff}
-#tools{display:none;flex-wrap:wrap;gap:12px;margin-top:28px;padding-top:20px;border-top:2px dashed rgba(255,255,255,.3)}
+#tools{display:none;flex-wrap:wrap;gap:12px;margin-top:28px;padding-top:20px;border-top:2px dashed rgba(255,255,255,.3);border-top-color:color-mix(in srgb,var(--fg) 30%,transparent)}
+#player,#sheet{color:#fff}
+.themes{flex-basis:100%;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-weight:700;font-size:17px;margin-bottom:6px}
+#themeList{display:flex;gap:10px;flex-wrap:wrap}
+#themeList button{width:44px;height:44px;padding:0;border-radius:50%;background:var(--t);border:3px solid rgba(255,255,255,.35);box-shadow:0 2px 0 rgba(0,0,0,.2)}
+#themeList button[aria-pressed="true"]{border-color:var(--fg);box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--fg)}
 body.editing #tools{display:flex}
-#tools button{border:0;border-radius:999px;background:rgba(255,255,255,.16);padding:10px 20px;font-weight:700;font-size:17px}
+#tools button{border:0;border-radius:999px;background:rgba(255,255,255,.16);background:color-mix(in srgb,var(--fg) 16%,transparent);padding:10px 20px;font-weight:700;font-size:17px}
 #tools p{flex-basis:100%;margin:0;color:var(--soft);font-size:15px;line-height:1.4;max-width:60ch}
 .f textarea{resize:vertical;min-height:52px;font-size:16px;line-height:1.35}
 body.editing .tile:not(.add){touch-action:manipulation}
@@ -181,6 +186,7 @@ body.dragmode{user-select:none;-webkit-user-select:none}
 <main>
   <div class="grid" id="grid"></div>
   <div id="tools">
+    <div class="themes"><span>Hintergrund</span><div id="themeList" role="group" aria-label="Hintergrund wählen"></div></div>
     <button type="button" id="exportBtn">Kacheln exportieren</button>
     <button type="button" id="importBtn">Kacheln importieren</button>
     <input type="file" id="importFile" accept=".json,application/json" hidden>
@@ -565,6 +571,27 @@ $('delBtn').onclick=async()=>{
   if(spotId===editing.id)closeSpotify();
   dlg.close();renderGrid();toast('Kachel gelöscht.');
 };
+
+/* Hintergrund / Farbthemen */
+const STARS='radial-gradient(1.6px 1.6px at 12% 18%,rgba(255,255,255,.85) 50%,transparent 55%),radial-gradient(1.2px 1.2px at 68% 8%,rgba(255,255,255,.6) 50%,transparent 55%),radial-gradient(1.4px 1.4px at 38% 62%,rgba(255,255,255,.55) 50%,transparent 55%),radial-gradient(1px 1px at 84% 44%,rgba(255,255,255,.75) 50%,transparent 55%),radial-gradient(1.8px 1.8px at 52% 88%,rgba(255,255,255,.5) 50%,transparent 55%),radial-gradient(1.1px 1.1px at 92% 78%,rgba(255,255,255,.6) 50%,transparent 55%)';
+const THEMES={
+  auto:{label:'Blau',sw:'#3452C2'},
+  nacht:{label:'Nachthimmel',sw:'#16204A',v:{'--bg':'#16204A','--bar':'#0D1433','--fg':'#FFFFFF','--soft':'#AEB9E8','--pat':STARS}},
+  wald:{label:'Wald',sw:'#2F6B4F',v:{'--bg':'#2F6B4F','--bar':'#1F4A36','--fg':'#FFFFFF','--soft':'#CFE8DA','--pat':'none'}},
+  beere:{label:'Beere',sw:'#6B2E6B',v:{'--bg':'#6B2E6B','--bar':'#4A1D4B','--fg':'#FFFFFF','--soft':'#EBD3EA','--pat':'none'}},
+  sonne:{label:'Sonne',sw:'#FFD76A',v:{'--bg':'#FFD76A','--bar':'#4A3510','--fg':'#2B2210','--soft':'#6B5520','--pat':'none'}},
+  wolke:{label:'Wolke',sw:'#E6ECF5',v:{'--bg':'#E6ECF5','--bar':'#27304D','--fg':'#1B1F3B','--soft':'#5A6480','--pat':'none'}}
+};
+let theme=loadJSON('hoerbox.theme','auto');
+function applyTheme(k){
+  if(!THEMES[k])k='auto';theme=k;
+  const root=document.documentElement;
+  ['--bg','--bar','--fg','--soft','--pat'].forEach(v=>root.style.removeProperty(v));
+  Object.entries(THEMES[k].v||{}).forEach(([v,val])=>root.style.setProperty(v,val));
+  $('themeList').innerHTML=Object.entries(THEMES).map(([id,t])=>`<button type="button" data-t="${id}" style="--t:${t.sw}" aria-label="${t.label}" title="${t.label}" aria-pressed="${id===k}"></button>`).join('');
+}
+$('themeList').addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(!b)return;applyTheme(b.dataset.t);saveJSON('hoerbox.theme',theme)});
+applyTheme(theme);
 
 /* Export / Import */
 const blobToData=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b)});
