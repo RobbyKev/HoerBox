@@ -77,7 +77,7 @@ body.has-player main{padding-bottom:150px}
 }
 body.has-player #player{display:block}
 .pinner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:14px}
-.pemoji{width:58px;height:58px;flex:none;border-radius:18px;background:var(--c,#FFC53D);display:grid;place-items:center;font-size:34px}
+.pemoji{width:58px;height:58px;flex:none;border-radius:18px;background-color:var(--c,#FFC53D);background-size:cover;background-position:center;display:grid;place-items:center;font-size:34px}
 .ptext{flex:1;min-width:0}
 .ptitle{font-weight:800;font-size:20px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .psub{color:rgba(255,255,255,.72);font-size:16px;line-height:1.2}
@@ -164,6 +164,21 @@ body.editing .tile:not(.add){touch-action:manipulation}
 .tile.dragging{opacity:.25}
 .drag-ghost{position:fixed;z-index:50;pointer-events:none;margin:0;transform-origin:center;box-shadow:0 18px 30px rgba(0,0,0,.35)!important;opacity:.95}
 body.dragmode{user-select:none;-webkit-user-select:none}
+.psub.dev{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+.slist{max-height:min(58vh,480px);overflow:auto;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch}
+.slist-msg{margin:6px 0;color:rgba(255,255,255,.75);font-size:16px}
+.ep,.epcont,.devbtn{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:rgba(255,255,255,.09);border-radius:14px;padding:8px 10px;color:#fff}
+.epcont{background:#1DB954;color:#0B2415;font-weight:800;font-size:17px;padding:12px 14px;margin-bottom:8px}
+.ep img{width:52px;height:52px;border-radius:10px;flex:none;object-fit:cover;background:#333}
+.ep .tx{display:flex;flex-direction:column;min-width:0;flex:1}
+.ep .t{font-weight:700;font-size:16px;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ep .m{font-size:14px;color:rgba(255,255,255,.7);margin-top:2px}
+.ep .bar{height:4px;border-radius:2px;background:rgba(255,255,255,.2);margin-top:6px;overflow:hidden}
+.ep .bar i{display:block;height:100%;background:#1DB954}
+.ep.done{opacity:.55}
+.ep .st{font-size:20px;flex:none}
+.devbtn{font-weight:700;font-size:17px;padding:12px 14px}
+.devbtn.on{outline:3px solid #1DB954}
 #toast{
   position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);
   background:var(--paper);color:var(--ink);padding:10px 18px;border-radius:16px;font-weight:700;font-size:16px;
@@ -187,6 +202,8 @@ body.dragmode{user-select:none;-webkit-user-select:none}
   <div class="grid" id="grid"></div>
   <div id="tools">
     <div class="themes"><span>Hintergrund</span><div id="themeList" role="group" aria-label="Hintergrund wählen"></div></div>
+    <button type="button" id="spBtn">Mit Spotify verbinden</button>
+    <p id="spState"></p>
     <button type="button" id="exportBtn">Kacheln exportieren</button>
     <button type="button" id="importBtn">Kacheln importieren</button>
     <input type="file" id="importFile" accept=".json,application/json" hidden>
@@ -337,7 +354,7 @@ function renderGrid(){
   if(folder&&!tiles.some(x=>x.id===folder))folder=null;
   const f=folder?tiles.find(x=>x.id===folder):null;
   $('backBtn').hidden=!f;$('hTitle').textContent=f?f.name:'Hörbox';
-  const playingId=spotId||(cur&&!audio.paused?cur.tile.id:null);
+  const playingId=spotId||(cur&&!audio.paused?cur.tile.id:null)||(spNow&&spNow.state&&spNow.state.is_playing?spNow.tile.id:null);
   const playingParent=(tiles.find(x=>x.id===playingId)||{}).parent||null;
   const list=tiles.filter(t=>(t.parent||null)===folder);
   list.forEach(t=>{
@@ -381,10 +398,18 @@ function openSpotify(t){
   $('sFrame').innerHTML=`<iframe src="https://open.spotify.com/embed/${e.type}/${e.id}?utm_source=generator&theme=0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="Spotify: ${esc(t.name)}"></iframe>`;
   spotId=t.id;$('sheet').hidden=false;document.body.classList.add('spotify-open');renderGrid();
 }
-function closeSpotify(){$('sFrame').innerHTML='';$('sheet').hidden=true;spotId=null;document.body.classList.remove('spotify-open');renderGrid()}
+function closeSpotify(){$('sFrame').onclick=null;$('sFrame').innerHTML='';$('sheet').hidden=true;spotId=null;document.body.classList.remove('spotify-open');renderGrid()}
 $('sClose').onclick=closeSpotify;
 async function playTile(t,index){
-  if(t.kind==='spotify'){openSpotify(t);return}
+  if(t.kind==='spotify'){
+    if(!spLogged()){openSpotify(t);return}
+    const e=spotEmbed(t.url);
+    if(e&&e.type==='show'){openShowList(t);return}
+    if(spNow&&spNow.tile.id===t.id){togglePlay();return}
+    if(spotId)closeSpotify();
+    spPlay(t);return;
+  }
+  if(spNow){spStop()}
   if(spotId)closeSpotify();
   if(cur&&cur.tile.id===t.id&&index===undefined){togglePlay();return}
   savePos();
@@ -415,14 +440,18 @@ async function startAudio(){
   }
 }
 function togglePlay(){
+  if(spNow){spToggle();return}
   if(!cur)return;
   if(audio.paused){if(cur.tile.kind==='link')audio.src=cur.tile.url;startAudio()}
   else{audio.pause();savePos()}
 }
 function renderPlayer(){
+  if(spNow){renderSpPlayer();return}
+  $('pSub').classList.remove('dev');
   document.body.classList.toggle('has-player',!!cur);
   if(!cur)return;
   const t=cur.tile;
+  $('pEmoji').style.backgroundImage='';
   $('pEmoji').textContent=t.emoji;$('pEmoji').style.setProperty('--c',t.color);
   $('pTitle').textContent=t.name;
   $('pSub').textContent=t.kind==='link'?'Live':`Teil ${cur.index+1} von ${t.files.length}`;
@@ -432,6 +461,7 @@ function renderPlayer(){
   $('playBtn').setAttribute('aria-label',audio.paused?'Abspielen':'Pause');
 }
 function step(d){
+  if(spNow){sp(d>0?'/me/player/next':'/me/player/previous',{method:'POST'}).then(()=>setTimeout(spPoll,700)).catch(spErr);return}
   if(!cur||cur.tile.kind!=='files')return;
   if(d<0&&audio.currentTime>5){audio.currentTime=0;return}
   const i=cur.index+d;
@@ -683,6 +713,182 @@ window.addEventListener('pointerup',endDrag);
 window.addEventListener('pointercancel',endDrag);
 document.addEventListener('touchmove',e=>{if(drag&&drag.active)e.preventDefault()},{passive:false});
 grid.addEventListener('contextmenu',e=>{if(editMode)e.preventDefault()});
+
+/* ===== Spotify (Premium, Fernsteuerung der Spotify-App) ===== */
+const SP={id:'d6f6e82df7604b90b8e0534e9c499876',redirect:'https://robbykev.github.io/HoerBox/',
+  scopes:'user-read-playback-state user-modify-playback-state user-read-currently-playing user-read-playback-position'};
+let spNow=null,spPending=null;
+const b64url=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+function spLogged(){return !!loadJSON('sp.token',null)}
+async function spLogin(){
+  try{
+    const v=b64url(crypto.getRandomValues(new Uint8Array(48)));
+    const ch=b64url(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)));
+    const st=b64url(crypto.getRandomValues(new Uint8Array(12)));
+    localStorage.setItem('sp.verifier',v);localStorage.setItem('sp.state',st);
+    location.href='https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:SP.id,response_type:'code',redirect_uri:SP.redirect,code_challenge_method:'S256',code_challenge:ch,scope:SP.scopes,state:st});
+  }catch(e){toast('Die Spotify-Anmeldung konnte nicht gestartet werden.')}
+}
+function spSaveToken(j){const old=loadJSON('sp.token',null)||{};saveJSON('sp.token',{access:j.access_token,refresh:j.refresh_token||old.refresh,exp:Date.now()+((j.expires_in||3600)-60)*1000})}
+async function spHandleRedirect(){
+  const p=new URLSearchParams(location.search);
+  if(!p.has('code')&&!p.has('error'))return;
+  history.replaceState(null,'',location.pathname);
+  if(p.has('error')){toast('Spotify-Anmeldung abgebrochen.');return}
+  let st=null,v=null;try{st=localStorage.getItem('sp.state');v=localStorage.getItem('sp.verifier')}catch(e){}
+  if(p.get('state')!==st||!v){toast('Spotify-Anmeldung fehlgeschlagen. Bitte nochmal verbinden.');return}
+  try{
+    const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({client_id:SP.id,grant_type:'authorization_code',code:p.get('code'),redirect_uri:SP.redirect,code_verifier:v})});
+    const j=await r.json();
+    if(!r.ok)throw j;
+    spSaveToken(j);toast('Mit Spotify verbunden.');
+  }catch(e){toast('Spotify-Anmeldung fehlgeschlagen. Bitte nochmal verbinden.')}
+  spRenderState();
+}
+async function spToken(){
+  const t=loadJSON('sp.token',null);if(!t)return null;
+  if(Date.now()<t.exp)return t.access;
+  try{
+    const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({grant_type:'refresh_token',refresh_token:t.refresh,client_id:SP.id})});
+    const j=await r.json();if(!r.ok)throw j;
+    spSaveToken(j);return j.access_token;
+  }catch(e){try{localStorage.removeItem('sp.token')}catch(_){}spRenderState();return null}
+}
+async function sp(path,opt={}){
+  const tk=await spToken();if(!tk)throw{code:'nologin'};
+  const r=await fetch('https://api.spotify.com/v1'+path,{...opt,headers:{Authorization:'Bearer '+tk,'Content-Type':'application/json'}});
+  if(r.status===204||r.status===202)return null;
+  let body=null;try{body=await r.json()}catch(e){}
+  if(!r.ok)throw{code:r.status,body};
+  return body;
+}
+function spErr(e,t,opts){
+  if(!e)return;
+  if(e.code==='nologin'){toast('Bitte im Bearbeiten-Modus neu mit Spotify verbinden.');spNow=null;renderPlayer();return}
+  if(e.code===404&&t){spWake(t,opts);return}
+  if(e.code===403){toast('Spotify lehnt ab. Ist dein Konto in der Spotify-App unter „User Management“ eingetragen?');return}
+  if(e.code===429){toast('Spotify bremst gerade. Kurz warten und nochmal versuchen.');return}
+  toast('Spotify hat nicht reagiert. Nochmal versuchen.');
+}
+async function spDevices(){return((await sp('/me/player/devices'))||{}).devices||[]}
+async function spPickDevice(){
+  const d=await spDevices();if(!d.length)return null;
+  let pref=null;try{pref=localStorage.getItem('sp.device')}catch(e){}
+  return d.find(x=>x.id===pref)||d.find(x=>x.is_active)||(d.length===1?d[0]:null)||d.find(x=>/smartphone|tablet/i.test(x.type))||d[0];
+}
+function spWake(t,opts){
+  spPending={t,opts};
+  if(confirm('Spotify läuft gerade nicht auf diesem Gerät.\n\nSpotify jetzt kurz öffnen? Danach einfach zur Hörbox zurückwechseln, dann startet es automatisch.'))location.href='spotify://';
+  else{spPending=null;spNow=null;renderPlayer();renderGrid()}
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)return;
+  if(spPending){const p=spPending;spPending=null;setTimeout(()=>spPlay(p.t,p.opts),1200)}
+  else if(spNow)spPoll();
+});
+async function spPlay(t,opts={}){
+  const e=spotEmbed(t.url);if(!e)return;
+  if(cur){savePos();audio.pause();cur=null}
+  spNow={tile:t,state:spNow&&spNow.tile.id===t.id?spNow.state:null};renderPlayer();renderGrid();
+  try{
+    const dev=await spPickDevice();
+    if(!dev){spWake(t,opts);return}
+    const body=opts.uri?{uris:[opts.uri]}:(e.type==='track'||e.type==='episode')?{uris:[`spotify:${e.type}:${e.id}`]}:{context_uri:`spotify:${e.type}:${e.id}`};
+    if(opts.pos)body.position_ms=opts.pos;
+    await sp('/me/player/play?device_id='+encodeURIComponent(dev.id),{method:'PUT',body:JSON.stringify(body)});
+    setTimeout(spPoll,900);setTimeout(spPoll,2500);
+  }catch(err){spErr(err,t,opts)}
+}
+async function spToggle(){
+  const playing=spNow&&spNow.state&&spNow.state.is_playing;
+  try{await sp(playing?'/me/player/pause':'/me/player/play',{method:'PUT'});if(spNow&&spNow.state)spNow.state.is_playing=!playing;renderPlayer();renderGrid();setTimeout(spPoll,700)}
+  catch(e){if(e.code===404&&spNow)spPlay(spNow.tile);else spErr(e)}
+}
+function spStop(){if(spNow&&spNow.state&&spNow.state.is_playing)sp('/me/player/pause',{method:'PUT'}).catch(()=>{});spNow=null;renderPlayer();renderGrid()}
+async function spPoll(){
+  if(!spNow)return;
+  try{
+    const s=await sp('/me/player?additional_types=episode');
+    const was=spNow.state&&spNow.state.is_playing;
+    spNow.state=s;renderPlayer();
+    if(was!==(s&&s.is_playing))renderGrid();
+  }catch(e){if(e.code==='nologin')spErr(e)}
+}
+setInterval(()=>{if(spNow&&!document.hidden)spPoll()},5000);
+function renderSpPlayer(){
+  document.body.classList.add('has-player');
+  const t=spNow.tile,s=spNow.state,it=s&&s.item;
+  const img=(it&&((it.album&&it.album.images&&it.album.images[0])||(it.images&&it.images[0])||(it.show&&it.show.images&&it.show.images[0])||{}).url)||t.img||t.cover||'';
+  const pe=$('pEmoji');pe.style.setProperty('--c',t.color);
+  pe.style.backgroundImage=img?`url("${String(img).replace(/["\\)]/g,'')}")`:'';pe.textContent=img?'':t.emoji;
+  $('pTitle').textContent=(it&&it.name)||t.name;
+  const who=it?((it.show&&it.show.name)||(it.artists||[]).map(a=>a.name).join(', ')):'Verbinde mit Spotify …';
+  $('pSub').textContent=who+(s&&s.device?' · auf '+s.device.name:'');
+  $('pSub').classList.add('dev');
+  $('prevBtn').hidden=false;$('nextBtn').hidden=false;
+  const playing=!!(s&&s.is_playing);
+  $('playBtn').innerHTML=playing?ICON_PAUSE:ICON_PLAY;$('playBtn').setAttribute('aria-label',playing?'Pause':'Abspielen');
+}
+$('pSub').addEventListener('click',()=>{if(spNow)openDevicePicker()});
+function openSheet(title,link){
+  $('sTitle').textContent=title;$('sOpen').href=link||'https://open.spotify.com';
+  $('sheet').hidden=false;document.body.classList.add('spotify-open');
+}
+async function openDevicePicker(){
+  openSheet('Abspielen auf …');$('sFrame').innerHTML='<p class="slist-msg">Suche Geräte …</p>';
+  try{
+    const d=await spDevices();
+    if(!d.length){$('sFrame').innerHTML='<p class="slist-msg">Kein Gerät gefunden. Öffne Spotify auf dem Gerät, auf dem es laufen soll.</p>';return}
+    $('sFrame').innerHTML='<div class="slist">'+d.map(x=>`<button type="button" class="devbtn${x.is_active?' on':''}" data-id="${esc(x.id)}">${esc(x.name)}<span style="margin-left:auto;font-weight:500;opacity:.7">${esc(x.type)}</span></button>`).join('')+'</div>';
+    $('sFrame').onclick=async ev=>{
+      const b=ev.target.closest('[data-id]');if(!b)return;
+      try{localStorage.setItem('sp.device',b.dataset.id)}catch(e){}
+      closeSpotify();
+      try{await sp('/me/player',{method:'PUT',body:JSON.stringify({device_ids:[b.dataset.id],play:true})});setTimeout(spPoll,1000)}catch(e){spErr(e)}
+    };
+  }catch(e){closeSpotify();spErr(e)}
+}
+const fmtDate=d=>{const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}.${m[2]}.${m[1]}`:(d||'')};
+async function openShowList(t){
+  const e=spotEmbed(t.url);
+  if(spotId===t.id){closeSpotify();return}
+  if(spotId)closeSpotify();
+  openSheet(t.emoji+' '+t.name,`https://open.spotify.com/show/${e.id}`);
+  spotId=t.id;renderGrid();
+  $('sFrame').innerHTML='<p class="slist-msg">Lädt Folgen …</p>';
+  try{
+    const r=await sp(`/shows/${e.id}/episodes?limit=50&market=from_token`);
+    const eps=((r&&r.items)||[]).filter(Boolean);
+    if(!eps.length)throw{code:'empty'};
+    const cont=eps.find(x=>x.resume_point&&!x.resume_point.fully_played&&x.resume_point.resume_position_ms>0);
+    let h='';
+    if(cont)h+=`<button type="button" class="epcont" data-uri="${esc(cont.uri)}" data-pos="${cont.resume_point.resume_position_ms}">▶ Weiterhören: ${esc(cont.name)}</button>`;
+    h+='<div class="slist">'+eps.map(x=>{
+      const rp=x.resume_point||{},done=!!rp.fully_played;
+      const pct=!done&&rp.resume_position_ms&&x.duration_ms?Math.min(100,rp.resume_position_ms/x.duration_ms*100):0;
+      const im=(x.images&&(x.images[x.images.length-1]||x.images[0]))||{};
+      return `<button type="button" class="ep${done?' done':''}" data-uri="${esc(x.uri)}" data-pos="${done?0:(rp.resume_position_ms||0)}">${im.url?`<img src="${esc(im.url)}" alt="" loading="lazy">`:''}<span class="tx"><span class="t">${esc(x.name)}</span><span class="m">${esc(fmtDate(x.release_date))} · ${Math.max(1,Math.round((x.duration_ms||0)/60000))} Min.${done?' · gehört':''}</span>${pct?`<span class="bar"><i style="width:${pct.toFixed(1)}%"></i></span>`:''}</span>${done?'<span class="st" aria-hidden="true">✓</span>':''}</button>`;
+    }).join('')+'</div>';
+    $('sFrame').innerHTML=h;
+    $('sFrame').onclick=ev=>{const b=ev.target.closest('[data-uri]');if(!b)return;closeSpotify();spPlay(t,{uri:b.dataset.uri,pos:Number(b.dataset.pos)||0})};
+  }catch(err){
+    closeSpotify();
+    if(err&&err.code==='nologin'){openSpotify(t);return}
+    spPlay(t);
+  }
+}
+function spRenderState(){
+  const on=spLogged();
+  $('spBtn').textContent=on?'Spotify abmelden':'Mit Spotify verbinden';
+  $('spState').textContent=on?'Spotify ist verbunden: Kacheln spielen komplett über die Spotify-App, Podcasts zeigen eine Folgenliste.':'Spotify nicht verbunden: Spotify-Kacheln spielen im kleinen Player, oft nur als Vorschau.';
+}
+$('spBtn').onclick=()=>{
+  if(spLogged()){if(!confirm('Spotify auf diesem Gerät abmelden?'))return;try{localStorage.removeItem('sp.token')}catch(e){}spNow=null;renderPlayer();spRenderState();toast('Spotify abgemeldet.')}
+  else spLogin();
+};
+spRenderState();spHandleRedirect();
 
 /* Firebase-Sync */
 let fsDoc=null,pushTimer=null;
