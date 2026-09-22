@@ -179,6 +179,8 @@ body.dragmode{user-select:none;-webkit-user-select:none}
 .ep .st{font-size:20px;flex:none}
 .devbtn{font-weight:700;font-size:17px;padding:12px 14px}
 .devbtn.on{outline:3px solid #1DB954}
+.chk{display:flex;gap:10px;align-items:center;font-weight:700;font-size:16px;margin-top:10px}
+.chk input{width:22px;height:22px;flex:none;accent-color:var(--ink)}
 #toast{
   position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);
   background:var(--paper);color:var(--ink);padding:10px 18px;border-radius:16px;font-weight:700;font-size:16px;
@@ -260,7 +262,9 @@ body.dragmode{user-select:none;-webkit-user-select:none}
     </div>
     <div id="folderPart" hidden>
       <label class="f">Spotify-Link fürs Cover (optional)<input type="text" name="fspot" inputmode="url" autocomplete="off" placeholder="z. B. Künstler-Link"></label>
-      <p class="hint">Cover und Name werden vom Link übernommen. Die einzelnen Alben legst du danach im Ordner als eigene Kacheln an.</p>
+      <p class="hint">Cover und Name werden vom Link übernommen.</p>
+      <label class="chk"><input type="checkbox" name="autofill"> Alle Alben des Künstlers als Kacheln anlegen</label>
+      <p class="hint" id="autoHint">Funktioniert mit einem Künstler-Link. Beim erneuten Speichern kommen nur neue Alben dazu.</p>
     </div>
     <label class="f" id="parentWrap" hidden>Liegt in<select name="parent"></select></label>
     <div id="filesPart" hidden>
@@ -399,7 +403,7 @@ function openSpotify(t){
   spotId=t.id;$('sheet').hidden=false;document.body.classList.add('spotify-open');renderGrid();
 }
 function closeSpotify(){$('sFrame').onclick=null;$('sFrame').innerHTML='';$('sheet').hidden=true;spotId=null;document.body.classList.remove('spotify-open');renderGrid()}
-$('sClose').onclick=closeSpotify;
+$('sClose').onclick=()=>{if(spPending){spPending=null;spNow=null;renderPlayer()}closeSpotify()};
 async function playTile(t,index){
   if(t.kind==='spotify'){
     if(!spLogged()){openSpotify(t);return}
@@ -529,6 +533,8 @@ function openEditor(t){
   form.querySelector(`input[name=color][value="${editing.color}"]`).checked=true;
   form.querySelector(`input[name=kind][value="${editing.kind}"]`).checked=true;
   form.image.value='';showKind(editing.kind);renderFileList();showImg();$('bulkHint').hidden=!isNew;
+  const auto=form.elements['autofill'];auto.checked=isNew&&spLogged();auto.disabled=!spLogged();
+  $('autoHint').textContent=spLogged()?'Funktioniert mit einem Künstler-Link. Beim erneuten Speichern kommen nur neue Alben dazu.':'Dafür erst unten im Bearbeiten-Modus mit Spotify verbinden.';
   $('delBtn').hidden=isNew;$('saveBtn').disabled=false;$('saveBtn').textContent='Speichern';
   dlg.showModal();
 }
@@ -581,11 +587,20 @@ form.addEventListener('submit',async e=>{
   }
   const t={id:editing.id,name,emoji:form.emoji.value.trim()||'🎵',color:form.querySelector('input[name=color]:checked').value,kind,url:spotLike?(()=>{const e=spotEmbed(url);return`https://open.spotify.com/${e.type}/${e.id}`})():url,cover:spotLike?cover:'',img:editing.img||'',files:kind==='files'?editing.files:[],names:kind==='files'?editing.names:[],parent:kind==='folder'?null:(form.elements['parent'].value||(($('parentWrap').hidden)?(editing.parent||null):null))};
   if(isNew)tiles.push(t);else tiles=tiles.map(x=>x.id===t.id?t:x);
+  let doneMsg=isNew?'Kachel hinzugefügt.':'Gespeichert.';
+  if(kind==='folder'&&form.elements['autofill'].checked&&spLogged()){
+    const ae=spotEmbed(url);
+    if(ae&&ae.type==='artist'){
+      $('saveBtn').textContent='Lädt Alben …';
+      try{const n=await spFillArtist(t.id,ae.id);doneMsg=n?`${n} Alben hinzugefügt.`:'Keine neuen Alben gefunden.'}
+      catch(err){doneMsg='Die Alben konnten nicht geladen werden.'}
+    }else doneMsg='Ordner gespeichert. Automatisch füllen geht nur mit einem Künstler-Link.';
+  }
   if(editing.removed.length)delete pos[t.id];
   saveTiles();saveJSON('hoerbox.pos',pos);
   if(cur&&cur.tile.id===t.id){audio.pause();cur=null;renderPlayer()}
   if(spotId===t.id)closeSpotify();
-  dlg.close();renderGrid();toast(isNew?'Kachel hinzugefügt.':'Gespeichert.');
+  dlg.close();renderGrid();toast(doneMsg);
 });
 $('delBtn').onclick=async()=>{
   const kids=tiles.filter(x=>x.parent===editing.id);
@@ -767,7 +782,7 @@ async function sp(path,opt={}){
 function spErr(e,t,opts){
   if(!e)return;
   if(e.code==='nologin'){toast('Bitte im Bearbeiten-Modus neu mit Spotify verbinden.');spNow=null;renderPlayer();return}
-  if(e.code===404&&t){spWake(t,opts);return}
+  if((e.code===404||e.code===502||e.code===500)&&t){spWake(t,opts);return}
   if(e.code===403){toast('Spotify lehnt ab. Ist dein Konto in der Spotify-App unter „User Management“ eingetragen?');return}
   if(e.code===429){toast('Spotify bremst gerade. Kurz warten und nochmal versuchen.');return}
   toast('Spotify hat nicht reagiert. Nochmal versuchen.');
@@ -779,17 +794,41 @@ async function spPickDevice(){
   const own=/iPhone|Android.*Mobile/i.test(navigator.userAgent)?'smartphone':(/iPad/i.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1))?'tablet':'computer';
   const chosen=d.find(x=>x.id===pref);if(chosen)return chosen;
   const mine=d.filter(x=>String(x.type).toLowerCase()===own);
-  if(mine.length)return mine.find(x=>x.is_active)||mine[0];
+  if(mine.length){const m=mine.find(x=>x.is_active)||mine[0];try{localStorage.setItem('sp.ownId',m.id)}catch(e){}return m}
   return null;
 }
 function spWake(t,opts){
   spPending={t,opts};
-  if(confirm('Spotify läuft gerade nicht auf diesem Gerät.\n\nSpotify jetzt kurz öffnen? Danach einfach zur Hörbox zurückwechseln, dann startet es automatisch.'))location.href='spotify://';
-  else{spPending=null;spNow=null;renderPlayer();renderGrid()}
+  openSheet('Spotify schläft gerade');
+  $('sFrame').innerHTML='<p class="slist-msg">iOS hat Spotify im Hintergrund schlafen gelegt. Einmal kurz öffnen und direkt zurück zur Hörbox wechseln, dann startet es von selbst.</p><button type="button" class="epcont" id="wakeBtn">Spotify öffnen</button>';
+  $('wakeBtn').onclick=()=>{location.href='spotify://'};
+}
+async function spFillArtist(folderId,artistId){
+  let url=`/artists/${artistId}/albums?include_groups=album,single,compilation&limit=50&market=from_token`,all=[],pages=0;
+  while(url&&pages<40){
+    let r;
+    try{r=await sp(url)}
+    catch(e){if(e.code===400&&url.includes('limit=50')){url=url.replace('limit=50','limit=10');continue}throw e}
+    all.push(...((r&&r.items)||[]).filter(Boolean));
+    url=r&&r.next?r.next.replace('https://api.spotify.com/v1',''):null;pages++;
+  }
+  const inFolder=tiles.filter(x=>x.parent===folderId);
+  const haveIds=new Set(inFolder.map(x=>(spotEmbed(x.url)||{}).id));
+  const haveNames=new Set(inFolder.map(x=>String(x.name).toLowerCase()));
+  all.sort((a,b)=>String(a.release_date).localeCompare(String(b.release_date)));
+  let n=0;
+  for(const a of all){
+    const key=String(a.name).toLowerCase();
+    if(haveIds.has(a.id)||haveNames.has(key))continue;
+    haveNames.add(key);haveIds.add(a.id);
+    tiles.push({id:uid(),name:a.name,emoji:'🎵',color:COLORS[tiles.length%COLORS.length],kind:'spotify',url:`https://open.spotify.com/album/${a.id}`,cover:(a.images&&a.images[0]&&a.images[0].url)||'',img:'',files:[],names:[],parent:folderId});
+    n++;
+  }
+  return n;
 }
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden)return;
-  if(spPending){const p=spPending;spPending=null;setTimeout(()=>spPlay(p.t,p.opts),1200)}
+  if(spPending){const p=spPending;spPending=null;closeSpotify();setTimeout(()=>spPlay(p.t,{...p.opts,retry:true,blind:false}),1200)}
   else if(spNow)spPoll();
 });
 async function spPlay(t,opts={}){
@@ -797,8 +836,14 @@ async function spPlay(t,opts={}){
   if(cur){savePos();audio.pause();cur=null}
   spNow={tile:t,state:spNow&&spNow.tile.id===t.id?spNow.state:null};renderPlayer();renderGrid();
   try{
-    const dev=await spPickDevice();
-    if(!dev){spWake(t,opts);return}
+    let dev=await spPickDevice();
+    if(!dev){await new Promise(res=>setTimeout(res,opts.retry?2000:1200));dev=await spPickDevice()}
+    if(!dev){
+      let own=null;try{own=localStorage.getItem('sp.ownId')}catch(e){}
+      if(own&&!opts.blind)dev={id:own};
+      else{spWake(t,opts);return}
+      opts={...opts,blind:true};
+    }
     const body=opts.uri?{uris:[opts.uri]}:(e.type==='track'||e.type==='episode')?{uris:[`spotify:${e.type}:${e.id}`]}:{context_uri:`spotify:${e.type}:${e.id}`};
     if(opts.pos)body.position_ms=opts.pos;
     await sp('/me/player/play?device_id='+encodeURIComponent(dev.id),{method:'PUT',body:JSON.stringify(body)});
