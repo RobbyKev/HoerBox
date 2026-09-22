@@ -776,7 +776,11 @@ async function spDevices(){return((await sp('/me/player/devices'))||{}).devices|
 async function spPickDevice(){
   const d=await spDevices();if(!d.length)return null;
   let pref=null;try{pref=localStorage.getItem('sp.device')}catch(e){}
-  return d.find(x=>x.id===pref)||d.find(x=>x.is_active)||(d.length===1?d[0]:null)||d.find(x=>/smartphone|tablet/i.test(x.type))||d[0];
+  const own=/iPhone|Android.*Mobile/i.test(navigator.userAgent)?'smartphone':(/iPad/i.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1))?'tablet':'computer';
+  const chosen=d.find(x=>x.id===pref);if(chosen)return chosen;
+  const mine=d.filter(x=>String(x.type).toLowerCase()===own);
+  if(mine.length)return mine.find(x=>x.is_active)||mine[0];
+  return null;
 }
 function spWake(t,opts){
   spPending={t,opts};
