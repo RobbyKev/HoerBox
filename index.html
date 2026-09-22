@@ -96,7 +96,7 @@ dialog::backdrop{background:rgba(10,15,40,.55)}
 form{padding:22px 22px 18px;display:flex;flex-direction:column;gap:14px}
 form h2{margin:0;font-size:26px;line-height:1.1}
 label.f{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:16px}
-input[type=text],input[type=url]{
+input[type=text],input[type=url],textarea{
   font:inherit;font-weight:500;font-size:18px;padding:10px 14px;border-radius:14px;border:2px solid var(--line);color:var(--ink);background:#fff;width:100%
 }
 .row{display:grid;grid-template-columns:90px 1fr;gap:12px}
@@ -154,6 +154,11 @@ select{font:inherit;font-weight:500;font-size:18px;padding:10px 14px;border-radi
 body.editing #tools{display:flex}
 #tools button{border:0;border-radius:999px;background:rgba(255,255,255,.16);padding:10px 20px;font-weight:700;font-size:17px}
 #tools p{flex-basis:100%;margin:0;color:var(--soft);font-size:15px;line-height:1.4;max-width:60ch}
+.f textarea{resize:vertical;min-height:52px;font-size:16px;line-height:1.35}
+body.editing .tile:not(.add){touch-action:manipulation}
+.tile.dragging{opacity:.25}
+.ghost{position:fixed;z-index:50;pointer-events:none;margin:0;transform-origin:center;box-shadow:0 18px 30px rgba(0,0,0,.35)!important;opacity:.95}
+body.dragmode{user-select:none;-webkit-user-select:none}
 #toast{
   position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);
   background:var(--paper);color:var(--ink);padding:10px 18px;border-radius:16px;font-weight:700;font-size:16px;
@@ -179,7 +184,8 @@ body.editing #tools{display:flex}
     <button type="button" id="exportBtn">Kacheln exportieren</button>
     <button type="button" id="importBtn">Kacheln importieren</button>
     <input type="file" id="importFile" accept=".json,application/json" hidden>
-    <p>Zum Übertragen auf ein anderes Gerät: hier exportieren, die Datei z. B. per AirDrop schicken und dort importieren. Vorhandene Kacheln bleiben erhalten.</p>
+    <p id="syncState"></p>
+    <p>Zum Übertragen ohne Firebase: hier exportieren, die Datei z. B. per AirDrop schicken und dort importieren. Vorhandene Kacheln bleiben erhalten.</p>
   </div>
   <div class="empty" id="empty" hidden>
     <strong>Noch leer hier.</strong>
@@ -225,7 +231,8 @@ body.editing #tools{display:flex}
       <p class="hint">Die Adresse muss mit https:// beginnen. Stream-Adressen findest du z. B. bei radio-browser.info.</p>
     </div>
     <div id="spotifyPart" hidden>
-      <label class="f">Spotify-Link<input type="text" name="spotify" inputmode="url" autocomplete="off" placeholder="Link oder Einbettungs-Code"></label>
+      <label class="f">Spotify-Link<textarea name="spotify" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Link oder Einbettungs-Code"></textarea></label>
+      <p class="hint" id="bulkHint">Mehrere auf einmal: einfach alle Links untereinander einfügen. Jeder wird eine eigene Kachel mit Cover und Name.</p>
       <p class="hint">In Spotify auf Teilen → Link kopieren, oder den Einbettungs-Code einfügen. Das Cover wird automatisch übernommen, der Name auch, wenn du keinen einträgst. Volle Titel gibt es nur, wenn in diesem Browser jemand bei Spotify eingeloggt ist, sonst 30-Sekunden-Vorschauen.</p>
     </div>
     <div id="folderPart" hidden>
@@ -256,7 +263,20 @@ body.editing #tools{display:flex}
 
 <div id="toast" role="status" aria-live="polite"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+/* ============================================================
+   FIREBASE: Hier die Konfiguration einfügen (z. B. die vom Wochenboard).
+   Ohne Konfiguration speichert die Hörbox nur auf dem jeweiligen Gerät.
+   Beispiel:
+   const FIREBASE_CONFIG = {
+     apiKey: "…", authDomain: "…", projectId: "…",
+     storageBucket: "…", messagingSenderId: "…", appId: "…"
+   };
+   ============================================================ */
+const FIREBASE_CONFIG = null;
+const SYNC_COLLECTION = 'hoerbox', SYNC_DOC = 'main';
 const COLORS=['#FFC53D','#6BD49B','#FF9EC4','#8FD3FF','#FF8A5B','#C9A7FF'];
 const ICON_PLAY='<svg viewBox="0 0 24 24"><path d="M7 4.6v14.8a1 1 0 0 0 1.52.85l12-7.4a1 1 0 0 0 0-1.7l-12-7.4A1 1 0 0 0 7 4.6z"/></svg>';
 const ICON_PAUSE='<svg viewBox="0 0 24 24"><rect x="5" y="4" width="5" height="16" rx="1.5"/><rect x="14" y="4" width="5" height="16" rx="1.5"/></svg>';
@@ -272,16 +292,17 @@ function loadJSON(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v?
 function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('Speichern hat nicht geklappt. Der Gerätespeicher ist evtl. voll.')}}
 const SPOT_ICON='<svg viewBox="0 0 24 24"><path d="M17.9 10.9C14.7 9 9.4 8.8 6.3 9.7a.9.9 0 1 1-.5-1.8c3.5-1.1 9.4-.9 13.1 1.3a.9.9 0 0 1-1 1.7zm-.2 2.9a.8.8 0 0 1-1 .2c-2.7-1.6-6.8-2.1-10-1.1a.8.8 0 0 1-.5-1.5c3.6-1.1 8.1-.6 11.2 1.3.4.2.5.7.3 1.1zm-1.2 2.8a.6.6 0 0 1-.9.2c-2.3-1.4-5.3-1.8-8.8-1a.6.6 0 1 1-.3-1.2c3.8-.9 7.1-.5 9.7 1.1.3.2.4.6.3.9z"/></svg>';
 function spotEmbed(u){const m=String(u).match(/open\.spotify\.com\/(?:intl-[a-z]{2}(?:-[a-z]{2})?\/)?(?:embed\/)?(album|playlist|track|episode|show|artist)\/([A-Za-z0-9]+)/i)||String(u).match(/^spotify:(album|playlist|track|episode|show|artist):([A-Za-z0-9]+)/i);return m?{type:m[1].toLowerCase(),id:m[2]}:null}
+function spotAll(txt){const re=/open\.spotify\.com\/(?:intl-[a-z]{2}(?:-[a-z]{2})?\/)?(?:embed\/)?(album|playlist|track|episode|show|artist)\/([A-Za-z0-9]+)|spotify:(album|playlist|track|episode|show|artist):([A-Za-z0-9]+)/gi;const out=[],seen=new Set();let m;while((m=re.exec(String(txt)))){const type=(m[1]||m[3]).toLowerCase(),id=m[2]||m[4];if(!seen.has(id)){seen.add(id);out.push({type,id})}}return out}
 async function spotMeta(e){
   const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),6000);
   try{const r=await fetch('https://open.spotify.com/oembed?url='+encodeURIComponent(`https://open.spotify.com/${e.type}/${e.id}`),{signal:ctl.signal});
     if(!r.ok)return null;const j=await r.json();return{cover:j.thumbnail_url||'',title:j.title||''}}
   catch(err){return null}finally{clearTimeout(to)}
 }
-function fileToSquare(file,size=480){
+function fileToSquare(file,size=320){
   return new Promise((res,rej)=>{const u=URL.createObjectURL(file);const im=new Image();
     im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=size;const m=Math.min(im.width,im.height);
-      c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,size,size);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',.85))};
+      c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,size,size);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',.8))};
     im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('bild'))};im.src=u});
 }
 function showImg(){const pic=editing.img||editing.cover||'';$('imgPrev').style.backgroundImage=pic?`url("${pic.replace(/["\\)]/g,'')}")`:'';$('imgClear').hidden=!editing.img}
@@ -316,7 +337,10 @@ function renderGrid(){
     const n=isF?tiles.filter(x=>x.parent===t.id).length:0;
     b.innerHTML=`<span class="emoji" aria-hidden="true">${esc(t.emoji)}</span><span class="name">${esc(t.name)}</span><span class="waves" aria-hidden="true"><i></i><i></i><i></i></span>`+(t.kind==='spotify'?`<span class="spot" aria-hidden="true">${SPOT_ICON}</span>`:'')+(isF?`<span class="count" aria-hidden="true">${n}</span>`:'')+(editMode?'<span class="badge" role="button" aria-label="Bearbeiten">✎</span>':'');
     b.setAttribute('aria-label',(isF?'Ordner: ':editMode?'Bearbeiten: ':'')+t.name);
+    b.dataset.id=t.id;
+    b.addEventListener('pointerdown',e=>dragDown(e,b,t));
     b.onclick=e=>{
+      if(Date.now()<noClickUntil)return;
       if(editMode&&(!isF||e.target.closest('.badge'))){openEditor(t);return}
       if(isF){folder=t.id;window.scrollTo(0,0);renderGrid();return}
       playTile(t);
@@ -359,7 +383,7 @@ async function playTile(t,index){
     const p=pos[t.id];
     if(index===undefined)index=p&&p.i<t.files.length?p.i:0;
     let blob=null;try{blob=await getFile(t.files[index])}catch(e){}
-    if(!blob){toast('Datei nicht gefunden. Füge sie im Bearbeiten-Modus neu hinzu.');return}
+    if(!blob){toast('Diese MP3s liegen nicht auf diesem Gerät. Sie bleiben dort, wo sie hinzugefügt wurden.');return}
     if(objUrl)URL.revokeObjectURL(objUrl);
     objUrl=URL.createObjectURL(blob);audio.src=objUrl;cur={tile:t,index};
     const start=p&&p.i===index?p.t:0;
@@ -455,13 +479,13 @@ function renderFileList(){
 form.files.addEventListener('change',renderFileList);
 function openEditor(t){
   isNew=!t;
-  editing=t?JSON.parse(JSON.stringify(t)):{id:uid(),name:'',emoji:'🎵',color:COLORS[tiles.length%COLORS.length],kind:'link',url:'',files:[],names:[],parent:folder};
+  editing=t?JSON.parse(JSON.stringify(t)):{id:uid(),name:'',emoji:'🎵',color:COLORS[tiles.length%COLORS.length],kind:'spotify',url:'',files:[],names:[],parent:folder};
   editing.removed=[];
   $('dlgTitle').textContent=isNew?'Neue Kachel':'Kachel bearbeiten';
   form.elements['name'].value=editing.name;form.emoji.value=editing.emoji;form.url.value=editing.kind==='link'?editing.url||'':'';form.spotify.value=editing.kind==='spotify'?editing.url||'':'';form.fspot.value=editing.kind==='folder'?editing.url||'':'';form.elements['parent'].value='';form.files.value='';
   form.querySelector(`input[name=color][value="${editing.color}"]`).checked=true;
   form.querySelector(`input[name=kind][value="${editing.kind}"]`).checked=true;
-  form.image.value='';showKind(editing.kind);renderFileList();showImg();
+  form.image.value='';showKind(editing.kind);renderFileList();showImg();$('bulkHint').hidden=!isNew;
   $('delBtn').hidden=isNew;$('saveBtn').disabled=false;$('saveBtn').textContent='Speichern';
   dlg.showModal();
 }
@@ -481,6 +505,20 @@ form.addEventListener('submit',async e=>{
   if(editing.kind==='folder'&&kind!=='folder'&&tiles.some(x=>x.parent===editing.id)){toast('Der Ordner enthält noch Kacheln. Verschieb oder lösch sie zuerst.');return}
   if(kind==='spotify'&&!spotEmbed(url)){toast('Das ist kein Spotify-Link für Album, Playlist oder Titel.');form.spotify.focus();return}
   if(kind==='link'&&!/^https?:\/\//i.test(url)){toast('Die Adresse muss mit https:// beginnen.');form.url.focus();return}
+  if(kind==='spotify'&&isNew){
+    const all=spotAll(url);
+    if(all.length>1){
+      const parent=form.elements['parent'].value||(($('parentWrap').hidden)?(editing.parent||null):null);
+      $('saveBtn').disabled=true;
+      let i=0;
+      for(const e of all){
+        i++;$('saveBtn').textContent=`Lädt ${i} von ${all.length} …`;
+        const meta=await spotMeta(e);
+        tiles.push({id:uid(),name:(meta&&meta.title)||'Spotify',emoji:'🎵',color:COLORS[tiles.length%COLORS.length],kind:'spotify',url:`https://open.spotify.com/${e.type}/${e.id}`,cover:(meta&&meta.cover)||'',img:'',files:[],names:[],parent});
+      }
+      saveTiles();dlg.close();renderGrid();toast(`${all.length} Kacheln hinzugefügt.`);return;
+    }
+  }
   $('saveBtn').disabled=true;$('saveBtn').textContent='Speichert …';
   let cover=spotLike&&spotEmbed(editing.url||'')?.id===spotEmbed(url)?.id?editing.cover||'':'';
   if(spotLike){
@@ -501,7 +539,7 @@ form.addEventListener('submit',async e=>{
   const t={id:editing.id,name,emoji:form.emoji.value.trim()||'🎵',color:form.querySelector('input[name=color]:checked').value,kind,url:spotLike?(()=>{const e=spotEmbed(url);return`https://open.spotify.com/${e.type}/${e.id}`})():url,cover:spotLike?cover:'',img:editing.img||'',files:kind==='files'?editing.files:[],names:kind==='files'?editing.names:[],parent:kind==='folder'?null:(form.elements['parent'].value||(($('parentWrap').hidden)?(editing.parent||null):null))};
   if(isNew)tiles.push(t);else tiles=tiles.map(x=>x.id===t.id?t:x);
   if(editing.removed.length)delete pos[t.id];
-  saveJSON('hoerbox.tiles',tiles);saveJSON('hoerbox.pos',pos);
+  saveTiles();saveJSON('hoerbox.pos',pos);
   if(cur&&cur.tile.id===t.id){audio.pause();cur=null;renderPlayer()}
   if(spotId===t.id)closeSpotify();
   dlg.close();renderGrid();toast(isNew?'Kachel hinzugefügt.':'Gespeichert.');
@@ -515,7 +553,7 @@ $('delBtn').onclick=async()=>{
   if(spotId&&gone.has(spotId))closeSpotify();
   tiles=tiles.filter(x=>!gone.has(x.id));gone.forEach(id=>delete pos[id]);
   if(gone.has(folder))folder=null;
-  saveJSON('hoerbox.tiles',tiles);saveJSON('hoerbox.pos',pos);
+  saveTiles();saveJSON('hoerbox.pos',pos);
   if(cur&&cur.tile.id===editing.id){audio.pause();audio.removeAttribute('src');cur=null;renderPlayer()}
   if(spotId===editing.id)closeSpotify();
   dlg.close();renderGrid();toast('Kachel gelöscht.');
@@ -549,16 +587,118 @@ $('importFile').addEventListener('change',async e=>{
     const byId=new Map(tiles.map(t=>[t.id,t]));
     data.tiles.forEach(t=>byId.set(t.id,t));
     tiles=[...byId.values()];
-    saveJSON('hoerbox.tiles',tiles);folder=null;renderGrid();
+    saveTiles();folder=null;renderGrid();
     toast(`${data.tiles.length} Kacheln importiert.`);
   }catch(err){toast('Import hat nicht geklappt. Der Gerätespeicher ist evtl. voll.')}
 });
 
-renderGrid();renderPlayer();
+/* Kacheln verschieben (Bearbeiten-Modus): gedrückt halten und ziehen, am Mac einfach ziehen */
+let drag=null,noClickUntil=0;
+function dragDown(e,b,t){
+  if(!editMode||e.button>0)return;
+  drag={b,t,sx:e.clientX,sy:e.clientY,x:e.clientX,y:e.clientY,active:false,mouse:e.pointerType==='mouse',timer:null};
+  if(!drag.mouse)drag.timer=setTimeout(()=>{if(drag&&!drag.active)startDrag()},260);
+}
+function startDrag(){
+  const d=drag;d.active=true;
+  const r=d.b.getBoundingClientRect();
+  const g=d.b.cloneNode(true);g.classList.add('ghost');g.classList.remove('playing');
+  Object.assign(g.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
+  d.ox=d.sx-r.left;d.oy=d.sy-r.top;d.g=g;document.body.append(g);
+  d.b.classList.add('dragging');document.body.classList.add('dragmode');
+  if(navigator.vibrate)try{navigator.vibrate(15)}catch(e){}
+  moveGhost();
+}
+function moveGhost(){
+  const d=drag;
+  d.g.style.transform=`translate(${d.x-d.sx}px,${d.y-d.sy}px) scale(1.06)`;
+  const el=document.elementFromPoint(d.x,d.y);
+  const target=el&&el.closest('#grid .tile[data-id]');
+  if(target&&target!==d.b){
+    const items=[...grid.querySelectorAll('.tile[data-id]')];
+    if(items.indexOf(d.b)<items.indexOf(target))target.after(d.b);else target.before(d.b);
+  }
+  if(d.y<70)window.scrollBy(0,-14);else if(d.y>innerHeight-70)window.scrollBy(0,14);
+}
+window.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  drag.x=e.clientX;drag.y=e.clientY;
+  const dist=Math.hypot(drag.x-drag.sx,drag.y-drag.sy);
+  if(!drag.active){
+    if(drag.mouse&&dist>6)startDrag();
+    else if(!drag.mouse&&dist>10){clearTimeout(drag.timer);drag=null}
+    return;
+  }
+  moveGhost();
+});
+function endDrag(){
+  if(!drag)return;
+  clearTimeout(drag.timer);
+  if(drag.active){
+    drag.g.remove();drag.b.classList.remove('dragging');document.body.classList.remove('dragmode');
+    const ids=[...grid.querySelectorAll('.tile[data-id]')].map(x=>x.dataset.id);
+    const inView=new Set(ids),byId=new Map(tiles.map(t=>[t.id,t]));let k=0;
+    const next=tiles.map(t=>inView.has(t.id)?byId.get(ids[k++]):t);
+    if(next.some((t,i)=>t!==tiles[i])){tiles=next;saveTiles()}
+    noClickUntil=Date.now()+350;
+    renderGrid();
+  }
+  drag=null;
+}
+window.addEventListener('pointerup',endDrag);
+window.addEventListener('pointercancel',endDrag);
+document.addEventListener('touchmove',e=>{if(drag&&drag.active)e.preventDefault()},{passive:false});
+grid.addEventListener('contextmenu',e=>{if(editMode)e.preventDefault()});
+
+/* Firebase-Sync */
+let fsDoc=null,pushTimer=null;
+const DEVICE=(()=>{try{let d=localStorage.getItem('hoerbox.device');if(!d){d=uid();localStorage.setItem('hoerbox.device',d)}return d}catch(e){return uid()}})();
+function setSync(t){$('syncState').textContent=t}
+function localUpdated(){try{return Number(localStorage.getItem('hoerbox.updated')||0)}catch(e){return 0}}
+function saveTiles(){try{localStorage.setItem('hoerbox.updated',String(Date.now()))}catch(e){}saveJSON('hoerbox.tiles',tiles);pushRemote()}
+function syncErr(e){return e&&e.code==='permission-denied'?'Sync-Fehler: Die Firestore-Regeln erlauben den Zugriff nicht.':'Sync-Fehler: Keine Verbindung zu Firebase.'}
+function pushRemote(){
+  if(!fsDoc)return;
+  clearTimeout(pushTimer);
+  pushTimer=setTimeout(()=>{
+    const data={tiles:JSON.parse(JSON.stringify(tiles)),updated:localUpdated()||Date.now(),by:DEVICE};
+    if(JSON.stringify(data).length>950000){setSync('Sync-Fehler: Zu viele eigene Bilder. Entferne einige oder nutze Spotify-Cover.');return}
+    setSync('Synchronisiert …');
+    fsDoc.set(data).then(()=>setSync('Synchronisiert mit allen Geräten.')).catch(e=>setSync(syncErr(e)));
+  },400);
+}
+function applyRemote(d){
+  tiles=Array.isArray(d.tiles)?d.tiles:[];
+  try{localStorage.setItem('hoerbox.tiles',JSON.stringify(tiles));localStorage.setItem('hoerbox.updated',String(d.updated||0))}catch(e){}
+  if(cur){const n=tiles.find(t=>t.id===cur.tile.id);if(n)cur.tile=n;else{audio.pause();cur=null}}
+  if(spotId&&!tiles.some(t=>t.id===spotId))closeSpotify();
+  renderGrid();renderPlayer();
+}
+function initSync(){
+  if(!FIREBASE_CONFIG||typeof firebase==='undefined'){setSync('Nur auf diesem Gerät gespeichert. Für den Abgleich zwischen Geräten Firebase einrichten.');return}
+  try{const app=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);fsDoc=app.firestore().collection(SYNC_COLLECTION).doc(SYNC_DOC)}
+  catch(e){setSync('Sync-Fehler: Die Firebase-Konfiguration stimmt nicht.');return}
+  setSync('Verbinde …');
+  fsDoc.onSnapshot(snap=>{
+    if(snap.metadata.hasPendingWrites)return;
+    let first=false;try{first=!localStorage.getItem('hoerbox.synced');localStorage.setItem('hoerbox.synced','1')}catch(e){}
+    if(!snap.exists){if(tiles.length)pushRemote();else setSync('Synchronisiert mit allen Geräten.');return}
+    const d=snap.data();
+    if(first&&tiles.length){
+      const byId=new Map((d.tiles||[]).map(t=>[t.id,t]));tiles.forEach(t=>{if(!byId.has(t.id))byId.set(t.id,t)});
+      tiles=[...byId.values()];saveTiles();renderGrid();return;
+    }
+    if((d.updated||0)>localUpdated())applyRemote(d);
+    else if((d.updated||0)<localUpdated())pushRemote();
+    setSync('Synchronisiert mit allen Geräten.');
+  },e=>setSync(syncErr(e)));
+}
+
+renderGrid();renderPlayer();initSync();
 (async()=>{let changed=false;
   for(const t of tiles){if(!(t.kind==='spotify'||(t.kind==='folder'&&t.url))||t.cover||t.img)continue;const e=spotEmbed(t.url);if(!e)continue;
     const m=await spotMeta(e);if(m&&m.cover){t.cover=m.cover;changed=true}}
-  if(changed){saveJSON('hoerbox.tiles',tiles);renderGrid()}
+  if(changed){saveTiles();renderGrid()}
 })();
 </script>
 </body>
