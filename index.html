@@ -185,6 +185,13 @@ body.dragmode{user-select:none;-webkit-user-select:none}
 .devbtn.on{outline:3px solid #1DB954}
 .chk{display:flex;gap:10px;align-items:center;font-weight:700;font-size:16px;margin-top:10px}
 .chk input{width:22px;height:22px;flex:none;accent-color:var(--ink)}
+.cbtn.timer{width:52px;height:52px;position:relative}
+.cbtn.timer.on{background:#FFC53D;color:var(--ink)}
+.cbtn.timer .min{position:absolute;font-size:15px;font-weight:800}
+.cbtn.timer.on svg{display:none}
+#diceBtn{border:0;border-radius:999px;background:rgba(255,255,255,.14);background:color-mix(in srgb,var(--fg) 14%,transparent);padding:8px 14px;font-size:22px;line-height:1;flex:none}
+#diceBtn[hidden]{display:none}
+.hright{display:flex;align-items:center;gap:10px}
 #toast{
   position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);
   background:var(--paper);color:var(--ink);padding:10px 18px;border-radius:16px;font-weight:700;font-size:16px;
@@ -202,7 +209,7 @@ body.dragmode{user-select:none;-webkit-user-select:none}
 <body>
 <header>
   <div class="hleft"><button id="backBtn" type="button" hidden>‹ Zurück</button><h1 id="hTitle">Hörbox</h1></div>
-  <button id="editBtn" type="button" aria-label="Bearbeiten (gedrückt halten)"><span>Bearbeiten</span></button>
+  <div class="hright"><button id="diceBtn" type="button" hidden aria-label="Zufällig auswählen">🎲</button><button id="editBtn" type="button" aria-label="Bearbeiten (gedrückt halten)"><span>Bearbeiten</span></button></div>
 </header>
 <main>
   <div class="grid" id="grid"></div>
@@ -227,6 +234,7 @@ body.dragmode{user-select:none;-webkit-user-select:none}
     <div class="pemoji" id="pEmoji"></div>
     <div class="ptext"><div class="ptitle" id="pTitle"></div><div class="psub" id="pSub"></div></div>
     <div class="ctrl">
+      <button class="cbtn timer" id="sleepBtn" type="button" aria-label="Einschlaf-Timer"><svg viewBox="0 0 24 24"><path d="M21 13.3A9 9 0 1 1 10.7 3a7 7 0 0 0 10.3 10.3z"/></svg><span class="min"></span></button>
       <button class="cbtn" id="prevBtn" type="button" aria-label="Vorheriger Teil"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="3" height="14" rx="1"/><path d="M20 5.5v13a1 1 0 0 1-1.5.86L8 13a1.15 1.15 0 0 1 0-2l10.5-6.36A1 1 0 0 1 20 5.5z"/></svg></button>
       <button class="cbtn big" id="playBtn" type="button" aria-label="Abspielen"></button>
       <button class="cbtn" id="nextBtn" type="button" aria-label="Nächster Teil"><svg viewBox="0 0 24 24"><rect x="17" y="5" width="3" height="14" rx="1"/><path d="M4 5.5v13a1 1 0 0 0 1.5.86L16 13a1.15 1.15 0 0 0 0-2L5.5 4.64A1 1 0 0 0 4 5.5z"/></svg></button>
@@ -401,6 +409,7 @@ function renderGrid(){
     a.innerHTML='<span class="emoji" aria-hidden="true">＋</span><span class="name">Neue Kachel</span>';
     a.onclick=()=>openEditor(null);grid.append(a);
   }
+  $('diceBtn').hidden=editMode||list.filter(x=>x.kind!=='folder').length<2;
   empty.hidden=!!list.length||editMode;
   empty.innerHTML=f?'<strong>Dieser Ordner ist noch leer.</strong>Halte oben rechts „Bearbeiten“ gedrückt und lege hier Kacheln an.':'<strong>Noch leer hier.</strong>Halte oben rechts „Bearbeiten“ gedrückt und füge Webradio oder MP3s hinzu.';
 }
@@ -994,6 +1003,57 @@ $('spBtn').onclick=()=>{
 };
 spRenderState();spHandleRedirect();
 
+/* Einschlaf-Timer */
+let sleepUntil=0,sleepTick=null;
+function sleepLabel(){
+  const b=$('sleepBtn'),on=sleepUntil>Date.now();
+  b.classList.toggle('on',on);
+  b.querySelector('.min').textContent=on?Math.max(1,Math.ceil((sleepUntil-Date.now())/60000)):'';
+  b.setAttribute('aria-label',on?`Einschlaf-Timer: noch ${Math.max(1,Math.ceil((sleepUntil-Date.now())/60000))} Minuten`:'Einschlaf-Timer');
+}
+function setSleep(min){
+  clearInterval(sleepTick);sleepTick=null;
+  if(!min){sleepUntil=0;sleepLabel();toast('Einschlaf-Timer aus.');return}
+  sleepUntil=Date.now()+min*60000;sleepLabel();
+  toast(`Einschlaf-Timer: ${min} Minuten.`);
+  sleepTick=setInterval(()=>{
+    if(Date.now()>=sleepUntil){clearInterval(sleepTick);sleepTick=null;sleepUntil=0;sleepLabel();sleepFire()}
+    else sleepLabel();
+  },10000);
+}
+async function sleepFire(){
+  try{
+    if(spNow){
+      const dev=spNow.state&&spNow.state.device;
+      const vol=dev&&dev.supports_volume?dev.volume_percent:null;
+      if(vol!=null)for(let i=4;i>=1;i--){await sp(`/me/player/volume?volume_percent=${Math.round(vol*i/5)}`,{method:'PUT'}).catch(()=>{});await pause(2000)}
+      await sp('/me/player/pause',{method:'PUT'}).catch(()=>{});
+      if(vol!=null)await sp(`/me/player/volume?volume_percent=${vol}`,{method:'PUT'}).catch(()=>{});
+      spPoll();
+    }else if(cur&&!audio.paused){
+      const v0=audio.volume;
+      for(let i=9;i>=0;i--){try{audio.volume=v0*i/10}catch(e){}await pause(700)}
+      audio.pause();savePos();try{audio.volume=v0}catch(e){}
+    }
+  }catch(e){}
+  toast('Gute Nacht. Der Einschlaf-Timer hat gestoppt.');
+}
+$('sleepBtn').onclick=()=>{
+  openSheet('Einschlaf-Timer');
+  const opts=[15,30,45,60];
+  $('sFrame').innerHTML='<div class="slist">'+opts.map(m=>`<button type="button" class="devbtn" data-min="${m}">${m} Minuten</button>`).join('')+`<button type="button" class="devbtn" data-min="0">Timer aus</button></div>`;
+  $('sFrame').onclick=ev=>{const b=ev.target.closest('[data-min]');if(!b)return;setSleep(Number(b.dataset.min));closeSpotify()};
+};
+
+/* Zufall */
+$('diceBtn').onclick=()=>{
+  const list=tiles.filter(t=>(t.parent||null)===folder&&t.kind!=='folder');
+  if(!list.length)return;
+  const t=list[Math.floor(Math.random()*list.length)];
+  toast('Zufall: '+t.name);
+  playTile(t);
+};
+
 /* Firebase-Sync */
 let fsDoc=null,pushTimer=null;
 const DEVICE=(()=>{try{let d=localStorage.getItem('hoerbox.device');if(!d){d=uid();localStorage.setItem('hoerbox.device',d)}return d}catch(e){return uid()}})();
@@ -1038,7 +1098,7 @@ function initSync(){
   },e=>setSync(syncErr(e)));
 }
 
-renderGrid();renderPlayer();initSync();
+renderGrid();renderPlayer();sleepLabel();initSync();
 (async()=>{let changed=false;
   for(const t of tiles){if(!(t.kind==='spotify'||(t.kind==='folder'&&t.url))||t.cover||t.img)continue;const e=spotEmbed(t.url);if(!e)continue;
     const m=await spotMeta(e);if(m&&m.cover){t.cover=m.cover;changed=true}}
