@@ -275,7 +275,8 @@ body.dragmode{user-select:none;-webkit-user-select:none}
     <div id="folderPart" hidden>
       <label class="f">Spotify-Link fürs Cover (optional)<input type="text" name="fspot" inputmode="url" autocomplete="off" placeholder="z. B. Künstler-Link"></label>
       <p class="hint">Cover und Name werden vom Link übernommen.</p>
-      <label class="chk"><input type="checkbox" name="autofill"> Alle Alben des Künstlers als Kacheln anlegen</label>
+      <label class="chk"><input type="checkbox" name="autofill"> Alben automatisch als Kacheln anlegen</label>
+      <label class="f" style="margin-top:8px">Suchbegriff statt Künstler (optional)<input type="text" name="fquery" autocomplete="off" placeholder="z. B. Was ist was Hörspiel"></label>
       <p class="hint" id="autoHint">Funktioniert mit einem Künstler-Link. Beim erneuten Speichern kommen nur neue Alben dazu.</p>
     </div>
     <label class="f" id="parentWrap" hidden>Liegt in<select name="parent"></select></label>
@@ -553,12 +554,12 @@ function openEditor(t){
   editing=t?JSON.parse(JSON.stringify(t)):{id:uid(),name:'',emoji:'🎵',color:COLORS[tiles.length%COLORS.length],kind:'spotify',url:'',files:[],names:[],parent:folder};
   editing.removed=[];
   $('dlgTitle').textContent=isNew?'Neue Kachel':'Kachel bearbeiten';
-  form.elements['name'].value=editing.name;form.emoji.value=editing.emoji;form.url.value=editing.kind==='link'?editing.url||'':'';form.spotify.value=editing.kind==='spotify'?editing.url||'':'';form.fspot.value=editing.kind==='folder'?editing.url||'':'';form.elements['parent'].value='';form.files.value='';
+  form.elements['name'].value=editing.name;form.emoji.value=editing.emoji;form.url.value=editing.kind==='link'?editing.url||'':'';form.spotify.value=editing.kind==='spotify'?editing.url||'':'';form.fspot.value=editing.kind==='folder'?editing.url||'':'';form.fquery.value='';form.elements['parent'].value='';form.files.value='';
   form.querySelector(`input[name=color][value="${editing.color}"]`).checked=true;
   form.querySelector(`input[name=kind][value="${editing.kind}"]`).checked=true;
   form.image.value='';showKind(editing.kind);renderFileList();showImg();$('bulkHint').hidden=!isNew;
   const auto=form.elements['autofill'];auto.checked=isNew&&spLogged();auto.disabled=!spLogged();
-  $('autoHint').textContent=spLogged()?'Funktioniert mit einem Künstler-Link. Beim erneuten Speichern kommen nur neue Alben dazu.':'Dafür erst unten im Bearbeiten-Modus mit Spotify verbinden.';
+  $('autoHint').textContent=spLogged()?'Mit Künstler-Link oder Suchbegriff. Beim erneuten Speichern kommen nur neue Alben dazu.':'Dafür erst unten im Bearbeiten-Modus mit Spotify verbinden.';
   $('delBtn').hidden=isNew;$('saveBtn').disabled=false;$('saveBtn').textContent='Speichern';
   dlg.showModal();
 }
@@ -614,14 +615,15 @@ form.addEventListener('submit',async e=>{
   let doneMsg=isNew?'Kachel hinzugefügt.':'Gespeichert.';
   if(kind==='folder'&&form.elements['autofill'].checked&&spLogged()){
     const ae=spotEmbed(url);
-    if(ae&&ae.type==='artist'){
+    const q=form.fquery.value.trim();
+    if(q||(ae&&ae.type==='artist')){
       $('saveBtn').textContent='Lädt Alben …';
       try{
-        const res=await spFillArtist(t.id,ae.id);
+        const res=q?await spFillQuery(t.id,q):await spFillArtist(t.id,ae.id);
         doneMsg=res.added?`${res.added} Alben hinzugefügt.${res.found>=MAXALB?' Mehr als 300 gehen nicht auf einmal, einfach nochmal speichern.':''}`:(res.found?`Alle ${res.found} Alben liegen schon im Ordner.`:'Spotify führt bei diesem Künstler keine Alben.');
       }
       catch(err){doneMsg='Die Alben konnten nicht geladen werden'+(err&&err.code?` (Fehler ${err.code})`:'')+'.'}
-    }else doneMsg='Ordner gespeichert. Automatisch füllen geht nur mit einem Künstler-Link.';
+    }else doneMsg='Ordner gespeichert. Zum Füllen brauchst du einen Künstler-Link oder einen Suchbegriff.';
   }
   if(editing.removed.length)delete pos[t.id];
   saveTiles();saveJSON('hoerbox.pos',pos);
@@ -867,17 +869,21 @@ async function spSearchAlbums(name,artistId){
   }
   return out;
 }
-async function spFillArtist(folderId,artistId){
-  let all=[],lastErr=null;
-  const add=list=>{const seen=new Set(all.map(x=>x.id));for(const a of list||[])if(a&&!seen.has(a.id)){seen.add(a.id);all.push(a)}};
-  try{add(await spAlbums(artistId,'album,single,compilation'))}catch(e){lastErr=e}
-  if(all.length<MAXALB){try{add(await spAlbums(artistId,'appears_on'))}catch(e){lastErr=e}}
-  if(all.length<MAXALB){
-    let name='';
-    try{name=((await sp('/artists/'+artistId))||{}).name||''}catch(e){lastErr=e}
-    if(name){try{add(await spSearchAlbums(name,artistId))}catch(e){lastErr=e}}
+async function spSearchQuery(q){
+  const out=[],seen=new Set();
+  for(let off=0;off<400;off+=10){
+    if(out.length>=MAXALB)break;
+    let r=null;
+    try{r=await sp(`/search?q=${encodeURIComponent(q)}&type=album&limit=10&offset=${off}&market=${MARKET}`)}catch(e){break}
+    const items=((r&&r.albums&&r.albums.items)||[]).filter(Boolean);
+    if(!items.length)break;
+    for(const a of items){if(!seen.has(a.id)){seen.add(a.id);out.push(a)}}
+    if(!(r.albums&&r.albums.next))break;
+    await pause(150);
   }
-  if(!all.length&&lastErr)throw lastErr;
+  return out;
+}
+function spAddAlbums(folderId,all){
   const inFolder=tiles.filter(x=>x.parent===folderId);
   const haveIds=new Set(inFolder.map(x=>(spotEmbed(x.url)||{}).id));
   const haveNames=new Set(inFolder.map(x=>String(x.name).toLowerCase()));
@@ -891,6 +897,20 @@ async function spFillArtist(folderId,artistId){
     n++;
   }
   return {added:n,found:all.length};
+}
+async function spFillQuery(folderId,q){return spAddAlbums(folderId,await spSearchQuery(q))}
+async function spFillArtist(folderId,artistId){
+  let all=[],lastErr=null;
+  const add=list=>{const seen=new Set(all.map(x=>x.id));for(const a of list||[])if(a&&!seen.has(a.id)){seen.add(a.id);all.push(a)}};
+  try{add(await spAlbums(artistId,'album,single,compilation'))}catch(e){lastErr=e}
+  if(all.length<MAXALB){try{add(await spAlbums(artistId,'appears_on'))}catch(e){lastErr=e}}
+  if(all.length<MAXALB){
+    let name='';
+    try{name=((await sp('/artists/'+artistId))||{}).name||''}catch(e){lastErr=e}
+    if(name){try{add(await spSearchAlbums(name,artistId))}catch(e){lastErr=e}}
+  }
+  if(!all.length&&lastErr)throw lastErr;
+  return spAddAlbums(folderId,all);
 }
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden)return;
