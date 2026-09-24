@@ -221,6 +221,7 @@ body.dragmode{user-select:none;-webkit-user-select:none}
     <button type="button" id="importBtn">Kacheln importieren</button>
     <input type="file" id="importFile" accept=".json,application/json" hidden>
     <p id="syncState"></p>
+    <p id="storeState"></p>
     <p>Zum Übertragen ohne Firebase: hier exportieren, die Datei z. B. per AirDrop schicken und dort importieren. Vorhandene Kacheln bleiben erhalten.</p>
   </div>
   <div class="empty" id="empty" hidden>
@@ -524,7 +525,17 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)savePos()})
 
 /* Bearbeiten: gedrückt halten zum Entsperren */
 let holdTimer=null,justUnlocked=false;
-function setEdit(on){editMode=on;document.body.classList.toggle('editing',on);editBtn.querySelector('span').textContent=on?'Fertig':'Bearbeiten';renderGrid()}
+function fmtMB(b){return b>=1073741824?(b/1073741824).toFixed(1)+' GB':Math.round(b/1048576)+' MB'}
+async function updateStore(){
+  const el=$('storeState');if(!el)return;
+  if(!(navigator.storage&&navigator.storage.estimate)){el.textContent='';return}
+  try{
+    const e=await navigator.storage.estimate();
+    const persisted=navigator.storage.persisted?await navigator.storage.persisted():false;
+    el.textContent=`Speicher auf diesem Gerät: ${fmtMB(e.usage||0)} belegt, insgesamt etwa ${fmtMB(e.quota||0)} verfügbar.`+(persisted?' Dauerhaft gesichert.':'');
+  }catch(err){el.textContent=''}
+}
+function setEdit(on){editMode=on;if(on)updateStore();document.body.classList.toggle('editing',on);editBtn.querySelector('span').textContent=on?'Fertig':'Bearbeiten';renderGrid()}
 editBtn.addEventListener('pointerdown',()=>{if(editMode)return;editBtn.classList.add('holding');holdTimer=setTimeout(()=>{editBtn.classList.remove('holding');justUnlocked=true;setEdit(true)},1500)});
 ['pointerup','pointerleave','pointercancel'].forEach(ev=>editBtn.addEventListener(ev,()=>{clearTimeout(holdTimer);editBtn.classList.remove('holding')}));
 editBtn.addEventListener('contextmenu',e=>e.preventDefault());
@@ -760,7 +771,7 @@ grid.addEventListener('contextmenu',e=>{if(editMode)e.preventDefault()});
 
 /* ===== Spotify (Premium, Fernsteuerung der Spotify-App) ===== */
 const SP={id:'d6f6e82df7604b90b8e0534e9c499876',redirect:'https://robbykev.github.io/HoerBox/',
-  scopes:'user-read-playback-state user-modify-playback-state user-read-currently-playing user-read-playback-position'};
+  scopes:'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing user-read-playback-position'};
 let spNow=null,spPending=null;
 const b64url=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 function spLogged(){return !!loadJSON('sp.token',null)}
@@ -773,7 +784,33 @@ async function spLogin(){
     location.href='https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:SP.id,response_type:'code',redirect_uri:SP.redirect,code_challenge_method:'S256',code_challenge:ch,scope:SP.scopes,state:st});
   }catch(e){toast('Die Spotify-Anmeldung konnte nicht gestartet werden.')}
 }
-function spSaveToken(j){const old=loadJSON('sp.token',null)||{};saveJSON('sp.token',{access:j.access_token,refresh:j.refresh_token||old.refresh,exp:Date.now()+((j.expires_in||3600)-60)*1000})}
+function spSaveToken(j){const old=loadJSON('sp.token',null)||{};saveJSON('sp.token',{access:j.access_token,refresh:j.refresh_token||old.refresh,exp:Date.now()+((j.expires_in||3600)-60)*1000});if(j.scope)saveJSON('sp.scopes',j.scope);sdkInit()}
+function spCanStream(){return String(loadJSON('sp.scopes','')||'').includes('streaming')}
+
+/* Wiedergabe direkt in der Hörbox (Web Playback SDK) */
+let sdkPlayer=null,sdkId=null,sdkReady=false,sdkActivated=false,sdkTries=0;
+window.onSpotifyWebPlaybackSDKReady=()=>sdkInit();
+function sdkInit(){
+  if(sdkPlayer||!window.Spotify||!spLogged()||!spCanStream())return;
+  try{
+    sdkPlayer=new window.Spotify.Player({name:'Hörbox',volume:.8,
+      getOAuthToken:async cb=>{let t=null;try{t=await spToken()}catch(e){}cb(t||'')}});
+    sdkPlayer.addListener('ready',({device_id})=>{sdkId=device_id;sdkReady=true;sdkTries=0;spRenderState()});
+    sdkPlayer.addListener('not_ready',()=>{sdkReady=false});
+    ['initialization_error','authentication_error','account_error','playback_error'].forEach(ev=>{
+      sdkPlayer.addListener(ev,async()=>{
+        if(ev==='playback_error')return;
+        if(ev==='authentication_error'&&sdkTries<2){sdkTries++;sdkReady=false;const t=await spToken();if(t){setTimeout(()=>sdkPlayer.connect(),400*sdkTries);return}}
+        sdkReady=false;spRenderState();
+      });
+    });
+    sdkPlayer.connect();
+  }catch(e){sdkPlayer=null}
+}
+async function sdkActivate(){
+  if(!sdkPlayer||sdkActivated)return;
+  try{await sdkPlayer.activateElement();sdkActivated=true}catch(e){}
+}
 async function spHandleRedirect(){
   const p=new URLSearchParams(location.search);
   if(!p.has('code')&&!p.has('error'))return;
@@ -818,8 +855,10 @@ function spErr(e,t,opts){
 }
 async function spDevices(){return((await sp('/me/player/devices'))||{}).devices||[]}
 async function spPickDevice(){
-  const d=await spDevices();if(!d.length)return null;
+  const d=await spDevices();
   let pref=null;try{pref=localStorage.getItem('sp.device')}catch(e){}
+  if(sdkReady&&sdkId&&(!pref||pref===sdkId))return{id:sdkId,name:'Hörbox'};
+  if(!d.length)return null;
   const own=/iPhone|Android.*Mobile/i.test(navigator.userAgent)?'smartphone':(/iPad/i.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1))?'tablet':'computer';
   const chosen=d.find(x=>x.id===pref);if(chosen)return chosen;
   const mine=d.filter(x=>String(x.type).toLowerCase()===own);
@@ -919,6 +958,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 async function spPlay(t,opts={}){
   const e=spotEmbed(t.url);if(!e)return;
+  await sdkActivate();
   if(cur){savePos();audio.pause();cur=null}
   spNow={tile:t,state:spNow&&spNow.tile.id===t.id?spNow.state:null};renderPlayer();renderGrid();
   try{
@@ -1017,13 +1057,16 @@ async function openShowList(t){
 function spRenderState(){
   const on=spLogged();
   $('spBtn').textContent=on?'Spotify abmelden':'Mit Spotify verbinden';
-  $('spState').textContent=on?'Spotify ist verbunden: Kacheln spielen komplett über die Spotify-App, Podcasts zeigen eine Folgenliste.':'Spotify nicht verbunden: Spotify-Kacheln spielen im kleinen Player, oft nur als Vorschau.';
+  $('spState').textContent=!on?'Spotify nicht verbunden: Spotify-Kacheln spielen im kleinen Player, oft nur als Vorschau.'
+    :!spCanStream()?'Spotify ist verbunden. Für Wiedergabe direkt in der Hörbox einmal abmelden und neu verbinden.'
+    :sdkReady?'Spotify ist verbunden. Die Musik läuft direkt hier in der Hörbox, die Spotify-App muss nicht offen sein.'
+    :'Spotify ist verbunden. Wiedergabe in der Hörbox wird vorbereitet, sonst läuft es über die Spotify-App.';
 }
 $('spBtn').onclick=()=>{
   if(spLogged()){if(!confirm('Spotify auf diesem Gerät abmelden?'))return;try{localStorage.removeItem('sp.token')}catch(e){}spNow=null;renderPlayer();spRenderState();toast('Spotify abgemeldet.')}
   else spLogin();
 };
-spRenderState();spHandleRedirect();
+spRenderState();spHandleRedirect();sdkInit();
 
 /* Einschlaf-Timer */
 let sleepUntil=0,sleepTick=null;
@@ -1127,5 +1170,6 @@ renderGrid();renderPlayer();sleepLabel();initSync();
   if(changed){saveTiles();renderGrid()}
 })();
 </script>
+<script src="https://sdk.scdn.co/spotify-player.js" async></script>
 </body>
 </html>
