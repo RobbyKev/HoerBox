@@ -249,22 +249,32 @@ body.sky .moon{opacity:.85}
 @keyframes earPop{0%{transform:scale(.3) translateY(10px);opacity:0}70%{transform:scale(1.08) translateY(-2px);opacity:1}100%{transform:scale(1);opacity:1}}
 @keyframes earWag{0%,88%,100%{transform:rotate(0)}92%{transform:rotate(-7deg)}96%{transform:rotate(6deg)}}
 #splash.hold .dog .ear,#splash.hold .sname{animation-play-state:paused}
-.fly{position:fixed;font-size:var(--sz,34px);opacity:0;animation:fly 2.6s cubic-bezier(.16,1,.3,1) forwards;pointer-events:none;z-index:5;
+.fly{position:fixed;font-size:var(--sz,34px);opacity:0;animation:fly var(--dur,4s) cubic-bezier(.22,.7,.3,1) forwards;pointer-events:none;z-index:5;
   filter:drop-shadow(0 4px 8px rgba(0,0,0,.25)) blur(var(--bl,0px));will-change:transform,opacity}
-.fly.f1{left:3vw;top:8vh;animation-delay:.4s;--dx:42vw;--dy:38vh;--rot:25deg;--sz:42px;--bl:1px}
-.fly.f2{right:4vw;top:12vh;animation-delay:.6s;--dx:-41vw;--dy:34vh;--rot:-30deg;--sz:28px}
-.fly.f3{left:5vw;bottom:12vh;animation-delay:.8s;--dx:40vw;--dy:-34vh;--rot:40deg;--sz:34px}
-.fly.f4{right:5vw;bottom:10vh;animation-delay:1s;--dx:-40vw;--dy:-36vh;--rot:-20deg;--sz:44px;--bl:1.2px}
-.fly.f5{left:46vw;top:2vh;animation-delay:1.2s;--dx:1vw;--dy:43vh;--rot:15deg;--sz:26px}
-.fly.f6{right:44vw;bottom:2vh;animation-delay:1.4s;--dx:-1vw;--dy:-43vh;--rot:-35deg;--sz:36px}
-.fly.f7{left:20vw;top:4vh;animation-delay:1.55s;--dx:25vw;--dy:42vh;--rot:-25deg;--sz:30px}
-.fly.f8{right:18vw;top:6vh;animation-delay:1.7s;--dx:-27vw;--dy:40vh;--rot:30deg;--sz:42px}
-.fly.f9{left:15vw;bottom:6vh;animation-delay:1.85s;--dx:30vw;--dy:-40vh;--rot:18deg;--sz:28px}
-.fly.f10{right:16vw;bottom:5vh;animation-delay:2s;--dx:-29vw;--dy:-41vh;--rot:-15deg;--sz:38px}
-.fly.f11{left:2vw;top:45vh;animation-delay:2.15s;--dx:43vw;--dy:2vh;--rot:35deg;--sz:32px}
-.fly.f12{right:2vw;top:48vh;animation-delay:2.3s;--dx:-43vw;--dy:-1vh;--rot:-40deg;--sz:48px;--bl:1.5px}
-@keyframes fly{0%{opacity:0;transform:translate3d(0,0,0) scale(1.3) rotate(0)}15%{opacity:1}85%{opacity:.9}
-  100%{opacity:0;transform:translate3d(var(--dx,0),var(--dy,0),0) scale(.05) rotate(var(--rot,30deg))}}
+.fly.f1{left:77vw;bottom:-10vh;animation-delay:0.38s;--dur:6.81s;--dx:24vw;--dy:-59vh;--rot:20deg;--sz:21px;--bl:1.95px;--op:0.75}
+.fly.f2{left:86vw;bottom:-10vh;animation-delay:0.91s;--dur:6.74s;--dx:14vw;--dy:-54vh;--rot:43deg;--sz:18px;--bl:1.69px;--op:0.75}
+.fly.f3{left:-8vw;top:81vh;animation-delay:1.03s;--dur:7.09s;--dx:58vw;--dy:3vh;--rot:22deg;--sz:23px;--bl:1.99px;--op:0.75}
+.fly.f4{left:-8vw;top:12vh;animation-delay:0.59s;--dur:6.92s;--dx:52vw;--dy:-13vh;--rot:30deg;--sz:19px;--bl:2.07px;--op:0.75}
+.fly.f5{right:-8vw;top:71vh;animation-delay:0.79s;--dur:6.8s;--dx:-55vw;--dy:15vh;--rot:-10deg;--sz:20px;--bl:2.0px;--op:0.75}
+.fly.f6{left:76vw;bottom:-10vh;animation-delay:0.14s;--dur:7.11s;--dx:-20vw;--dy:-56vh;--rot:27deg;--sz:20px;--bl:1.91px;--op:0.75}
+.fly.f7{left:-8vw;top:56vh;animation-delay:1.13s;--dur:6.28s;--dx:53vw;--dy:-7vh;--rot:-18deg;--sz:21px;--bl:1.61px;--op:0.75}
+.fly.f8{right:-8vw;top:11vh;animation-delay:1.04s;--dur:6.68s;--dx:-59vw;--dy:-1vh;--rot:41deg;--sz:23px;--bl:1.64px;--op:0.75}
+.fly.f9{left:49vw;top:-10vh;animation-delay:2.06s;--dur:4.42s;--dx:-20vw;--dy:56vh;--rot:-28deg;--sz:33px;--bl:0.61px;--op:0.9}
+.fly.f10{right:-8vw;top:17vh;animation-delay:1.41s;--dur:5.2s;--dx:-52vw;--dy:-22vh;--rot:12deg;--sz:35px;--bl:0.49px;--op:0.9}
+.fly.f11{right:-8vw;top:21vh;animation-delay:0.78s;--dur:4.52s;--dx:-58vw;--dy:16vh;--rot:-11deg;--sz:34px;--bl:0.61px;--op:0.9}
+.fly.f12{left:8vw;top:-10vh;animation-delay:1.44s;--dur:5.4s;--dx:-12vw;--dy:54vh;--rot:-40deg;--sz:34px;--bl:0.7px;--op:0.9}
+.fly.f13{right:-8vw;top:32vh;animation-delay:0.93s;--dur:5.17s;--dx:-59vw;--dy:-9vh;--rot:-36deg;--sz:28px;--bl:0.56px;--op:0.9}
+.fly.f14{left:-8vw;top:16vh;animation-delay:1.52s;--dur:4.42s;--dx:55vw;--dy:12vh;--rot:-29deg;--sz:31px;--bl:0.58px;--op:0.9}
+.fly.f15{left:79vw;bottom:-10vh;animation-delay:0.81s;--dur:5.03s;--dx:-17vw;--dy:-58vh;--rot:33deg;--sz:30px;--bl:0.56px;--op:0.9}
+.fly.f16{right:-8vw;top:29vh;animation-delay:2.71s;--dur:3.35s;--dx:-54vw;--dy:22vh;--rot:16deg;--sz:54px;--bl:0.08px;--op:1}
+.fly.f17{left:-8vw;top:58vh;animation-delay:1.35s;--dur:2.63s;--dx:52vw;--dy:-19vh;--rot:45deg;--sz:45px;--bl:0.39px;--op:1}
+.fly.f18{left:38vw;bottom:-10vh;animation-delay:2.27s;--dur:2.83s;--dx:1vw;--dy:-61vh;--rot:-37deg;--sz:51px;--bl:0.07px;--op:1}
+.fly.f19{right:-8vw;top:34vh;animation-delay:1.43s;--dur:3.28s;--dx:-59vw;--dy:10vh;--rot:-19deg;--sz:54px;--bl:0.25px;--op:1}
+.fly.f20{left:-8vw;top:13vh;animation-delay:1.44s;--dur:2.8s;--dx:56vw;--dy:1vh;--rot:22deg;--sz:51px;--bl:0.02px;--op:1}
+.fly.f21{right:-8vw;top:16vh;animation-delay:2.29s;--dur:2.96s;--dx:-57vw;--dy:-17vh;--rot:21deg;--sz:58px;--bl:0.13px;--op:1}
+@keyframes fly{0%{opacity:0;transform:translate3d(0,0,0) scale(1) rotate(0)}
+  12%{opacity:var(--op,1)}78%{opacity:var(--op,1)}
+  100%{opacity:0;transform:translate3d(var(--dx,0),var(--dy,0),0) scale(.12) rotate(var(--rot,30deg))}}
 #splash.short .fly{display:none}
 #splash.hold .sbox,#splash.hold .fly{animation-play-state:paused}
 .shint{position:absolute;bottom:14vh;left:0;right:0;text-align:center;color:rgba(255,255,255,.8);
@@ -300,10 +310,13 @@ body.sky .moon{opacity:.85}
     </div>
   </div>
   <div class="sname">TheoBox</div>
-  <span class="fly f1">🎵</span><span class="fly f2">🎙</span><span class="fly f3">📻</span>
-  <span class="fly f4">🐻</span><span class="fly f5">⭐️</span><span class="fly f6">🎧</span>
-  <span class="fly f7">🚀</span><span class="fly f8">🦊</span><span class="fly f9">🦉</span>
-  <span class="fly f10">🌙</span><span class="fly f11">📚</span><span class="fly f12">🎨</span>
+  <span class="fly f1">🎵</span><span class="fly f2">🎧</span><span class="fly f3">🌙</span>
+  <span class="fly f4">⭐️</span><span class="fly f5">☁️</span><span class="fly f6">🦉</span>
+  <span class="fly f7">🧸</span><span class="fly f8">🦄</span><span class="fly f9">📖</span>
+  <span class="fly f10">🕯</span><span class="fly f11">🌊</span><span class="fly f12">💤</span>
+  <span class="fly f13">🐻</span><span class="fly f14">🦊</span><span class="fly f15">🐘</span>
+  <span class="fly f16">🧙‍♂️</span><span class="fly f17">🚀</span><span class="fly f18">🏴‍☠️</span>
+  <span class="fly f19">🚂</span><span class="fly f20">📚</span><span class="fly f21">🎙</span>
   <div class="shint">Tippen zum Starten</div>
 </div>
 </div>
@@ -1459,8 +1472,8 @@ renderGrid();renderPlayer();sleepLabel();initSync();
   const run=()=>{
     sfxPlay('plopp',[160,420],.18,.14);
     setTimeout(()=>sfxPlay('klack',[820,620],.12,.1),620);
-    if(navigator.vibrate){try{navigator.vibrate(20);setTimeout(()=>navigator.vibrate(25),mode==='kurz'?1400:4100)}catch(e){}}
-    setTimeout(go,mode==='kurz'?1500:4200);
+    if(navigator.vibrate){try{navigator.vibrate(20);setTimeout(()=>navigator.vibrate(25),mode==='kurz'?1400:6300)}catch(e){}}
+    setTimeout(go,mode==='kurz'?1500:6400);
   };
   if(mode==='tippen'){
     sp.classList.add('hold');
@@ -1472,9 +1485,9 @@ renderGrid();renderPlayer();sleepLabel();initSync();
   }
   setTimeout(()=>sfxPlay('plopp',[160,420],.18,.14),220);
   setTimeout(()=>sfxPlay('klack',[820,620],.12,.1),820);
-  setTimeout(go,mode==='kurz'?1500:4200);
+  setTimeout(go,mode==='kurz'?1500:6400);
   sp.addEventListener('click',()=>{audio();go()});
-  if(navigator.vibrate){try{setTimeout(()=>navigator.vibrate(20),250);setTimeout(()=>navigator.vibrate(25),mode==='kurz'?1400:4100)}catch(e){}}
+  if(navigator.vibrate){try{setTimeout(()=>navigator.vibrate(20),250);setTimeout(()=>navigator.vibrate(25),mode==='kurz'?1400:6300)}catch(e){}}
 })();
 (async()=>{let changed=false;
   for(const t of tiles){if(!(t.kind==='spotify'||(t.kind==='folder'&&t.url))||t.cover||t.img)continue;const e=spotEmbed(t.url);if(!e)continue;
