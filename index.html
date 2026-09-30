@@ -215,6 +215,7 @@ body.dragmode{user-select:none;-webkit-user-select:none}
   <div class="grid" id="grid"></div>
   <div id="tools">
     <div class="themes"><span>Hintergrund</span><div id="themeList" role="group" aria-label="Hintergrund wählen"></div></div>
+    <button type="button" id="spModeBtn"></button>
     <button type="button" id="spBtn">Mit Spotify verbinden</button>
     <p id="spState"></p>
     <button type="button" id="exportBtn">Kacheln exportieren</button>
@@ -270,6 +271,7 @@ body.dragmode{user-select:none;-webkit-user-select:none}
     </div>
     <div id="spotifyPart" hidden>
       <label class="f">Spotify-Link<textarea name="spotify" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Link oder Einbettungs-Code"></textarea></label>
+      <label class="chk"><input type="checkbox" name="openapp"> Diese Kachel immer in der Spotify-App öffnen</label>
       <p class="hint" id="bulkHint">Mehrere auf einmal: einfach alle Links untereinander einfügen. Jeder wird eine eigene Kachel mit Cover und Name.</p>
       <p class="hint">In Spotify auf Teilen → Link kopieren, oder den Einbettungs-Code einfügen. Das Cover wird automatisch übernommen, der Name auch, wenn du keinen einträgst. Volle Titel gibt es nur, wenn in diesem Browser jemand bei Spotify eingeloggt ist, sonst 30-Sekunden-Vorschauen.</p>
     </div>
@@ -432,6 +434,7 @@ function closeSpotify(){$('sFrame').onclick=null;$('sFrame').innerHTML='';$('she
 $('sClose').onclick=()=>{if(spPending){spPending=null;spNow=null;renderPlayer()}closeSpotify()};
 async function playTile(t,index){
   if(t.kind==='spotify'){
+    if(t.openApp||spMode()==='app'){openInApp(t);return}
     if(!spLogged()){openSpotify(t);return}
     const e=spotEmbed(t.url);
     if(e&&e.type==='show'){openShowList(t);return}
@@ -568,7 +571,7 @@ function openEditor(t){
   form.elements['name'].value=editing.name;form.emoji.value=editing.emoji;form.url.value=editing.kind==='link'?editing.url||'':'';form.spotify.value=editing.kind==='spotify'?editing.url||'':'';form.fspot.value=editing.kind==='folder'?editing.url||'':'';form.fquery.value='';form.elements['parent'].value='';form.files.value='';
   form.querySelector(`input[name=color][value="${editing.color}"]`).checked=true;
   form.querySelector(`input[name=kind][value="${editing.kind}"]`).checked=true;
-  form.image.value='';showKind(editing.kind);renderFileList();showImg();$('bulkHint').hidden=!isNew;
+  form.image.value='';showKind(editing.kind);renderFileList();showImg();$('bulkHint').hidden=!isNew;form.elements['openapp'].checked=!!editing.openApp;
   const auto=form.elements['autofill'];auto.checked=isNew&&spLogged();auto.disabled=!spLogged();
   $('autoHint').textContent=spLogged()?'Mit Künstler-Link oder Suchbegriff. Beim erneuten Speichern kommen nur neue Alben dazu.':'Dafür erst unten im Bearbeiten-Modus mit Spotify verbinden.';
   $('delBtn').hidden=isNew;$('saveBtn').disabled=false;$('saveBtn').textContent='Speichern';
@@ -621,7 +624,7 @@ form.addEventListener('submit',async e=>{
     toast('Die Dateien konnten nicht gespeichert werden. Der Gerätespeicher ist evtl. voll.');
     $('saveBtn').disabled=false;$('saveBtn').textContent='Speichern';return;
   }
-  const t={id:editing.id,name,emoji:form.emoji.value.trim()||'🎵',color:form.querySelector('input[name=color]:checked').value,kind,url:spotLike?(()=>{const e=spotEmbed(url);return`https://open.spotify.com/${e.type}/${e.id}`})():url,cover:spotLike?cover:'',img:editing.img||'',files:kind==='files'?editing.files:[],names:kind==='files'?editing.names:[],parent:kind==='folder'?null:(form.elements['parent'].value||(($('parentWrap').hidden)?(editing.parent||null):null))};
+  const t={id:editing.id,name,emoji:form.emoji.value.trim()||'🎵',color:form.querySelector('input[name=color]:checked').value,kind,url:spotLike?(()=>{const e=spotEmbed(url);return`https://open.spotify.com/${e.type}/${e.id}`})():url,cover:spotLike?cover:'',openApp:kind==='spotify'&&form.elements['openapp'].checked,img:editing.img||'',files:kind==='files'?editing.files:[],names:kind==='files'?editing.names:[],parent:kind==='folder'?null:(form.elements['parent'].value||(($('parentWrap').hidden)?(editing.parent||null):null))};
   if(isNew)tiles.push(t);else tiles=tiles.map(x=>x.id===t.id?t:x);
   let doneMsg=isNew?'Kachel hinzugefügt.':'Gespeichert.';
   if(kind==='folder'&&form.elements['autofill'].checked&&spLogged()){
@@ -1118,6 +1121,30 @@ $('diceBtn').onclick=()=>{
   toast('Zufall: '+t.name);
   playTile(t);
 };
+
+/* In der Spotify-App öffnen */
+function spMode(){return loadJSON('hoerbox.spmode','box')}
+function openInApp(t){
+  const e=spotEmbed(t.url);if(!e){toast('Der Spotify-Link passt nicht.');return}
+  if(cur){savePos();audio.pause()}
+  if(spNow)spStop();
+  location.href=`https://open.spotify.com/${e.type}/${e.id}`;
+}
+function renderSpMode(){
+  const app=spMode()==='app';
+  $('spModeBtn').textContent=app?'Spotify-Kacheln: in Spotify öffnen':'Spotify-Kacheln: in der Hörbox abspielen';
+}
+$('spModeBtn').onclick=()=>{saveJSON('hoerbox.spmode',spMode()==='app'?'box':'app');renderSpMode();toast(spMode()==='app'?'Kacheln öffnen jetzt die Spotify-App.':'Kacheln spielen jetzt in der Hörbox.')};
+renderSpMode();
+
+/* Fünfmal auf den Titel tippen schaltet den Bearbeiten-Modus um */
+let titleTaps=0,titleTimer=null;
+$('hTitle').style.cursor='pointer';
+$('hTitle').addEventListener('click',()=>{
+  titleTaps++;clearTimeout(titleTimer);
+  if(titleTaps>=5){titleTaps=0;justUnlocked=false;setEdit(!editMode);toast(editMode?'Bearbeiten an.':'Bearbeiten aus.');return}
+  titleTimer=setTimeout(()=>{titleTaps=0},1500);
+});
 
 /* Firebase-Sync */
 let fsDoc=null,pushTimer=null;
