@@ -479,9 +479,7 @@ function sfxCtx(){
   }catch(e){}
   return ACTX;
 }
-function sfx(freqs,vol=.12,len=.3){
-  if(!sfxOn())return;
-  const a=sfxCtx();if(!a||a.state!=='running')return;
+function sfxTones(a,freqs,vol,len){
   freqs.forEach((f,i)=>{
     const o=a.createOscillator(),g=a.createGain();
     o.type='sine';o.frequency.setValueAtTime(f,a.currentTime+i*.05);
@@ -491,7 +489,21 @@ function sfx(freqs,vol=.12,len=.3){
     o.start(a.currentTime+i*.05);o.stop(a.currentTime+i*.05+len);
   });
 }
-['pointerdown','touchstart','click','keydown'].forEach(ev=>window.addEventListener(ev,()=>sfxCtx(),{passive:true}));
+function sfx(freqs,vol=.12,len=.3){
+  if(!sfxOn())return;
+  const a=sfxCtx();if(!a)return;
+  if(a.state==='running'){sfxTones(a,freqs,vol,len);return}
+  // Die Tonausgabe wacht erst auf – Ton nachreichen, sobald sie läuft
+  try{a.resume().then(()=>{if(a.state==='running')sfxTones(a,freqs,vol,len)}).catch(()=>{})}catch(e){}
+}
+function sfxWake(){
+  const a=sfxCtx();if(!a)return;
+  try{
+    const b=a.createBufferSource();b.buffer=a.createBuffer(1,1,22050);
+    b.connect(a.destination);b.start(0);
+  }catch(e){}
+}
+['pointerdown','touchstart','click','keydown'].forEach(ev=>window.addEventListener(ev,sfxWake,{passive:true}));
 
 /* IndexedDB für MP3-Dateien */
 let dbp=null;
