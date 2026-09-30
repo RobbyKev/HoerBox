@@ -242,6 +242,11 @@ body.sky .moon{opacity:.85}
 @keyframes fly{0%{opacity:0;transform:translate(0,0) scale(1.3) rotate(0)}15%{opacity:1}85%{opacity:.9}
   100%{opacity:0;transform:translate(var(--dx,0),var(--dy,0)) scale(.1) rotate(var(--rot,30deg))}}
 #splash.short .fly{display:none}
+#splash.hold .sbox,#splash.hold .fly{animation-play-state:paused}
+.shint{position:absolute;bottom:14vh;left:0;right:0;text-align:center;color:rgba(255,255,255,.8);
+  font-weight:700;font-size:18px;letter-spacing:1px;display:none;animation:hintPulse 1.6s ease-in-out infinite}
+#splash.hold .shint{display:block}
+@keyframes hintPulse{50%{opacity:.45}}
 .sdots{display:flex;gap:12px;z-index:10}
 .sdots i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.35);animation:dot 1.1s ease-in-out infinite}
 .sdots i:nth-child(2){animation-delay:.12s}.sdots i:nth-child(3){animation-delay:.24s}
@@ -270,6 +275,7 @@ body.sky .moon{opacity:.85}
   <span class="fly f4">🐻</span><span class="fly f5">⭐️</span><span class="fly f6">🎧</span>
   <span class="fly f7">🚀</span><span class="fly f8">🦊</span><span class="fly f9">🦉</span>
   <span class="fly f10">🌙</span><span class="fly f11">📚</span><span class="fly f12">🎨</span>
+  <div class="shint">Tippen zum Starten</div>
 </div>
 </div>
 <div class="sky-layer s1" aria-hidden="true"></div>
@@ -1330,11 +1336,11 @@ function renderSpMode(){
 $('spModeBtn').onclick=()=>{saveJSON('hoerbox.spmode',spMode()==='app'?'box':'app');renderSpMode();toast(spMode()==='app'?'Kacheln öffnen jetzt die Spotify-App.':'Kacheln spielen jetzt in der TheoBox.')};
 renderSpMode();
 $('doneBtn').onclick=()=>{setEdit(false);window.scrollTo(0,0)};
-const SPLASH_MODES=['voll','kurz','aus'];
+const SPLASH_MODES=['voll','tippen','kurz','aus'];
 function renderSplashBtn(){const m=loadJSON('hoerbox.splash','voll');
-  $('splashBtn').textContent='Startanimation: '+({voll:'voll',kurz:'kurz',aus:'aus'})[m]}
+  $('splashBtn').textContent='Startanimation: '+({voll:'voll',tippen:'mit Ton (tippen)',kurz:'kurz',aus:'aus'})[m]}
 $('splashBtn').onclick=()=>{const m=loadJSON('hoerbox.splash','voll');
-  saveJSON('hoerbox.splash',SPLASH_MODES[(SPLASH_MODES.indexOf(m)+1)%3]);renderSplashBtn();toast('Gilt ab dem nächsten Start.')};
+  saveJSON('hoerbox.splash',SPLASH_MODES[(SPLASH_MODES.indexOf(m)+1)%SPLASH_MODES.length]);renderSplashBtn();toast('Gilt ab dem nächsten Start.')};
 renderSplashBtn();
 function renderSoundBtn(){$('soundBtn').textContent='Töne: '+(sfxOn()?'an':'aus')}
 $('soundBtn').onclick=()=>{saveJSON('hoerbox.sound',!sfxOn());renderSoundBtn();sfxCtx();if(sfxOn())sfx([523.25,784],.12,.25)};
@@ -1405,6 +1411,19 @@ renderGrid();renderPlayer();sleepLabel();initSync();
   window.addEventListener('pointerdown',()=>audio(),{once:true});
   if(mode==='aus'||fast){sp.style.display='none';return}
   if(mode==='kurz')sp.classList.add('short');
+  const run=()=>{
+    sfx([160,420],.18,.14);
+    if(navigator.vibrate){try{navigator.vibrate(20);setTimeout(()=>navigator.vibrate(25),mode==='kurz'?1400:4100)}catch(e){}}
+    setTimeout(go,mode==='kurz'?1500:4200);
+  };
+  if(mode==='tippen'){
+    sp.classList.add('hold');
+    sp.addEventListener('click',()=>{
+      if(sp.classList.contains('hold')){sp.classList.remove('hold');sfxWake();run();return}
+      go();
+    });
+    return;
+  }
   setTimeout(()=>sfx([160,420],.18,.14),220);
   setTimeout(go,mode==='kurz'?1500:4200);
   sp.addEventListener('click',()=>{audio();go()});
