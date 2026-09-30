@@ -276,6 +276,7 @@ body.sky .moon{opacity:.85}
   12%{opacity:var(--op,1)}78%{opacity:var(--op,1)}
   100%{opacity:0;transform:translate3d(var(--dx,0),var(--dy,0),0) scale(.12) rotate(var(--rot,30deg))}}
 #splash.short .fly{display:none}
+#splash.loop .fly{animation-iteration-count:infinite}
 #splash.hold .sbox,#splash.hold .fly{animation-play-state:paused}
 .shint{position:absolute;bottom:14vh;left:0;right:0;text-align:center;color:rgba(255,255,255,.8);
   font-weight:700;font-size:18px;letter-spacing:1px;display:none;animation:hintPulse 1.6s ease-in-out infinite}
@@ -317,7 +318,7 @@ body.sky .moon{opacity:.85}
   <span class="fly f13">🐻</span><span class="fly f14">🦊</span><span class="fly f15">🐘</span>
   <span class="fly f16">🧙‍♂️</span><span class="fly f17">🚀</span><span class="fly f18">🏴‍☠️</span>
   <span class="fly f19">🚂</span><span class="fly f20">📚</span><span class="fly f21">🎙</span>
-  <div class="shint">Tippen zum Starten</div>
+  <div class="shint">Tippen zum Öffnen</div>
 </div>
 </div>
 <div class="sky-layer s1" aria-hidden="true"></div>
@@ -1396,7 +1397,7 @@ renderSpMode();
 $('doneBtn').onclick=()=>{setEdit(false);window.scrollTo(0,0)};
 const SPLASH_MODES=['voll','tippen','kurz','aus'];
 function renderSplashBtn(){const m=loadJSON('hoerbox.splash','voll');
-  $('splashBtn').textContent='Startanimation: '+({voll:'voll',tippen:'mit Ton (tippen)',kurz:'kurz',aus:'aus'})[m]}
+  $('splashBtn').textContent='Startanimation: '+({voll:'voll',tippen:'wartet aufs Tippen',kurz:'kurz',aus:'aus'})[m]}
 $('splashBtn').onclick=()=>{const m=loadJSON('hoerbox.splash','voll');
   saveJSON('hoerbox.splash',SPLASH_MODES[(SPLASH_MODES.indexOf(m)+1)%SPLASH_MODES.length]);renderSplashBtn();toast('Gilt ab dem nächsten Start.')};
 renderSplashBtn();
@@ -1476,11 +1477,9 @@ renderGrid();renderPlayer();sleepLabel();initSync();
     setTimeout(go,mode==='kurz'?1500:6400);
   };
   if(mode==='tippen'){
-    sp.classList.add('hold');
-    sp.addEventListener('click',()=>{
-      if(sp.classList.contains('hold')){sp.classList.remove('hold');sfxWake();run();return}
-      go();
-    });
+    sp.classList.add('loop');
+    const h=sp.querySelector('.shint');if(h)h.style.display='block';
+    sp.addEventListener('click',()=>{sfxWake();go()});
     return;
   }
   setTimeout(()=>sfxPlay('plopp',[160,420],.18,.14),220);
