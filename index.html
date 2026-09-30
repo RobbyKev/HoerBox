@@ -200,17 +200,40 @@ body.dragmode{user-select:none;-webkit-user-select:none}
 #diceBtn{border:0;border-radius:999px;background:rgba(255,255,255,.14);background:color-mix(in srgb,var(--fg) 14%,transparent);padding:8px 14px;font-size:22px;line-height:1;flex:none}
 #diceBtn[hidden]{display:none}
 .hright{display:flex;align-items:center;gap:10px}
-#splash{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-  background:var(--bar);transition:opacity .45s ease,visibility .45s}
-#splash.gone{opacity:0;visibility:hidden;pointer-events:none}
-.slogo{width:130px;height:130px;border-radius:38px;display:grid;place-items:center;font-size:62px;
+#splash{position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;
+  background:var(--bar);transition:opacity .7s ease,transform .7s ease,visibility .7s;will-change:transform,opacity;cursor:pointer}
+#splash.gone{opacity:0;transform:scale(1.35);visibility:hidden;pointer-events:none}
+.sstage{position:relative;width:min(78vw,300px);height:min(78vw,300px);display:grid;place-items:center}
+.sbox{position:relative;width:62%;aspect-ratio:1;border-radius:30px;display:grid;place-items:center;z-index:10;
   background:linear-gradient(145deg,#ffffff,#dbdfe6);
-  box-shadow:0 14px 28px rgba(0,0,0,.4),inset 0 3px 4px rgba(255,255,255,.9),inset 0 -4px 6px rgba(0,0,0,.15);
-  animation:breathe 3s ease-in-out infinite}
-@keyframes breathe{50%{transform:scale(1.05)}}
-.sname{font-family:"Fredoka","Nunito",sans-serif;font-weight:700;font-size:40px;letter-spacing:1px;color:#fff}
-.sclaim{font-size:17px;color:rgba(255,255,255,.7);letter-spacing:2px;text-transform:uppercase}
-@media (prefers-reduced-motion: reduce){.slogo{animation:none}}
+  box-shadow:0 16px 30px rgba(0,0,0,.45),inset 0 3px 4px rgba(255,255,255,.9),inset 0 -5px 8px rgba(0,0,0,.16);
+  transform:scale(0);animation:pop .8s cubic-bezier(.18,1.5,.4,1) forwards}
+@keyframes pop{0%{transform:scale(0) rotate(-12deg)}60%{transform:scale(1.12) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
+.sface{font-family:"Fredoka","Nunito",sans-serif;font-weight:700;font-size:clamp(20px,5.2vw,26px);color:#2B2D42;letter-spacing:.5px;user-select:none}
+.fly{position:fixed;font-size:34px;opacity:0;animation:fly 2.6s cubic-bezier(.16,1,.3,1) forwards;pointer-events:none;z-index:5;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.25))}
+.fly.f1{left:3vw;top:8vh;animation-delay:.4s;--dx:42vw;--dy:38vh;--rot:25deg}
+.fly.f2{right:4vw;top:12vh;animation-delay:.6s;--dx:-41vw;--dy:34vh;--rot:-30deg}
+.fly.f3{left:5vw;bottom:12vh;animation-delay:.8s;--dx:40vw;--dy:-34vh;--rot:40deg}
+.fly.f4{right:5vw;bottom:10vh;animation-delay:1s;--dx:-40vw;--dy:-36vh;--rot:-20deg}
+.fly.f5{left:46vw;top:2vh;animation-delay:1.2s;--dx:1vw;--dy:43vh;--rot:15deg}
+.fly.f6{right:44vw;bottom:2vh;animation-delay:1.4s;--dx:-1vw;--dy:-43vh;--rot:-35deg}
+.fly.f7{left:20vw;top:4vh;animation-delay:1.55s;--dx:25vw;--dy:42vh;--rot:-25deg}
+.fly.f8{right:18vw;top:6vh;animation-delay:1.7s;--dx:-27vw;--dy:40vh;--rot:30deg}
+.fly.f9{left:15vw;bottom:6vh;animation-delay:1.85s;--dx:30vw;--dy:-40vh;--rot:18deg}
+.fly.f10{right:16vw;bottom:5vh;animation-delay:2s;--dx:-29vw;--dy:-41vh;--rot:-15deg}
+.fly.f11{left:2vw;top:45vh;animation-delay:2.15s;--dx:43vw;--dy:2vh;--rot:35deg}
+.fly.f12{right:2vw;top:48vh;animation-delay:2.3s;--dx:-43vw;--dy:-1vh;--rot:-40deg}
+@keyframes fly{0%{opacity:0;transform:translate(0,0) scale(1.3) rotate(0)}15%{opacity:1}85%{opacity:.9}
+  100%{opacity:0;transform:translate(var(--dx,0),var(--dy,0)) scale(.1) rotate(var(--rot,30deg))}}
+#splash.short .fly{display:none}
+.sdots{display:flex;gap:12px;z-index:10}
+.sdots i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.35);animation:dot 1.1s ease-in-out infinite}
+.sdots i:nth-child(2){animation-delay:.12s}.sdots i:nth-child(3){animation-delay:.24s}
+.sdots i:nth-child(4){animation-delay:.36s}.sdots i:nth-child(5){animation-delay:.48s}
+@keyframes dot{0%,100%{transform:scale(.6);opacity:.35}50%{transform:scale(1.25);opacity:1}}
+@media (prefers-reduced-motion: reduce){.sbox{animation:none;transform:none;opacity:1}.fly{display:none}.sdots i{animation:none}}.sdots i{animation:none}
+}
 #toast{
   position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);
   background:var(--paper);color:var(--ink);padding:10px 18px;border-radius:16px;font-weight:700;font-size:16px;
@@ -227,9 +250,13 @@ body.dragmode{user-select:none;-webkit-user-select:none}
 </head>
 <body>
 <div id="splash" aria-hidden="true">
-  <div class="slogo"><span>🐾</span></div>
-  <div class="sname">TheoBox</div>
-  <div class="sclaim">Hören &amp; Träumen</div>
+  <div class="sstage"><div class="sbox"><span class="sface">TheoBox</span></div></div>
+  <span class="fly f1">🎵</span><span class="fly f2">🎙</span><span class="fly f3">📻</span>
+  <span class="fly f4">🐻</span><span class="fly f5">⭐️</span><span class="fly f6">🎧</span>
+  <span class="fly f7">🚀</span><span class="fly f8">🦊</span><span class="fly f9">🦉</span>
+  <span class="fly f10">🌙</span><span class="fly f11">📚</span><span class="fly f12">🎨</span>
+  <div class="sdots"><i></i><i></i><i></i><i></i><i></i></div>
+</div>
 </div>
 <header>
   <div class="hleft"><button id="backBtn" type="button" hidden>‹ Zurück</button></div>
@@ -242,6 +269,7 @@ body.dragmode{user-select:none;-webkit-user-select:none}
   <div id="tools">
     <div class="themes"><span>Hintergrund</span><div id="themeList" role="group" aria-label="Hintergrund wählen"></div></div>
     <button type="button" id="doneBtn">✓ Fertig</button>
+    <button type="button" id="splashBtn"></button>
     <button type="button" id="spModeBtn"></button>
     <button type="button" id="spBtn">Mit Spotify verbinden</button>
     <p id="spState"></p>
@@ -1224,6 +1252,12 @@ function renderSpMode(){
 $('spModeBtn').onclick=()=>{saveJSON('hoerbox.spmode',spMode()==='app'?'box':'app');renderSpMode();toast(spMode()==='app'?'Kacheln öffnen jetzt die Spotify-App.':'Kacheln spielen jetzt in der TheoBox.')};
 renderSpMode();
 $('doneBtn').onclick=()=>{setEdit(false);window.scrollTo(0,0)};
+const SPLASH_MODES=['voll','kurz','aus'];
+function renderSplashBtn(){const m=loadJSON('hoerbox.splash','voll');
+  $('splashBtn').textContent='Startanimation: '+({voll:'voll',kurz:'kurz',aus:'aus'})[m]}
+$('splashBtn').onclick=()=>{const m=loadJSON('hoerbox.splash','voll');
+  saveJSON('hoerbox.splash',SPLASH_MODES[(SPLASH_MODES.indexOf(m)+1)%3]);renderSplashBtn();toast('Gilt ab dem nächsten Start.')};
+renderSplashBtn();
 
 /* Fünfmal auf den Titel tippen schaltet den Bearbeiten-Modus um */
 let titleTaps=0,titleTimer=null;
@@ -1279,7 +1313,28 @@ function initSync(){
 }
 
 renderGrid();renderPlayer();sleepLabel();initSync();
-(()=>{const sp=$('splash');const go=()=>sp.classList.add('gone');setTimeout(go,1600);sp.addEventListener('click',go)})();
+(()=>{
+  const sp=$('splash');
+  const mode=loadJSON('hoerbox.splash','voll');
+  let done=false,actx=null;
+  const audio=()=>{try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume()}catch(e){}return actx};
+  const ping=(freqs,vol)=>{const a=audio();if(!a||a.state!=='running')return;
+    freqs.forEach((f,i)=>{const o=a.createOscillator(),g=a.createGain();o.type='sine';
+      o.frequency.setValueAtTime(f,a.currentTime+i*.05);
+      g.gain.setValueAtTime(vol,a.currentTime+i*.05);
+      g.gain.exponentialRampToValueAtTime(.001,a.currentTime+i*.05+.35);
+      o.connect(g);g.connect(a.destination);o.start(a.currentTime+i*.05);o.stop(a.currentTime+i*.05+.35)})};
+  const go=()=>{if(done)return;done=true;ping([523.25,659.25,783.99],.12);
+    sp.classList.add('gone');setTimeout(()=>{sp.style.display='none'},700)};
+  const fast=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.addEventListener('pointerdown',()=>audio(),{once:true});
+  if(mode==='aus'||fast){sp.style.display='none';return}
+  if(mode==='kurz')sp.classList.add('short');
+  setTimeout(()=>ping([160,420],.18),220);
+  setTimeout(go,mode==='kurz'?1500:4200);
+  sp.addEventListener('click',()=>{audio();go()});
+  if(navigator.vibrate){try{setTimeout(()=>navigator.vibrate(20),250);setTimeout(()=>navigator.vibrate(25),mode==='kurz'?1400:4100)}catch(e){}}
+})();
 (async()=>{let changed=false;
   for(const t of tiles){if(!(t.kind==='spotify'||(t.kind==='folder'&&t.url))||t.cover||t.img)continue;const e=spotEmbed(t.url);if(!e)continue;
     const m=await spotMeta(e);if(m&&m.cover){t.cover=m.cover;changed=true}}
