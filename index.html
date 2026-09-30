@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Hörbox">
-<title>Hörbox</title>
+<meta name="apple-mobile-web-app-title" content="TheoBox">
+<title>TheoBox</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#3452C2; --bar:#233A95; --fg:#FFFFFF; --pat:none; --paper:#FFFFFF; --ink:#1B1F3B; --soft:#DDE4FF; --line:#E3E6F2;
@@ -24,14 +24,15 @@
 html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
 body{
   margin:0;min-height:100%;background-color:var(--bg);background-image:var(--pat);background-size:260px 260px;color:var(--fg);transition:background-color .3s;
-  font-family:"Baloo 2","Arial Rounded MT Bold",ui-rounded,system-ui,sans-serif;
+  font-family:"Nunito","Arial Rounded MT Bold",ui-rounded,system-ui,sans-serif;
   -webkit-tap-highlight-color:transparent;
 }
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:4px solid #FFC53D;outline-offset:3px}
 
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px 6px;max-width:1100px;margin:0 auto}
-h1{margin:0;font-size:clamp(30px,6vw,44px);font-weight:800;letter-spacing:-.01em;line-height:1}
+h1{margin:0;font-family:"Fredoka","Nunito",ui-rounded,system-ui,sans-serif;font-size:clamp(30px,6vw,44px);font-weight:700;letter-spacing:.5px;line-height:1;text-shadow:0 2px 6px rgba(0,0,0,.25)}
+h2,.tile .name,#hTitle{font-family:"Fredoka","Nunito",ui-rounded,system-ui,sans-serif}
 #editBtn{
   position:relative;overflow:hidden;border:0;border-radius:999px;padding:8px 18px;
   background:rgba(255,255,255,.14);background:color-mix(in srgb,var(--fg) 14%,transparent);font-weight:700;font-size:17px;
@@ -47,16 +48,20 @@ body.has-player main{padding-bottom:150px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px}
 
 .tile{
-  position:relative;aspect-ratio:1;border:0;border-radius:30px;background:var(--c);color:var(--ink);
+  position:relative;aspect-ratio:1;border:0;border-radius:28px;background:var(--c);color:var(--ink);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:12px;
-  box-shadow:0 7px 0 rgba(0,0,0,.28);transform:translateY(0);transition:transform .08s,box-shadow .08s;
+  box-shadow:0 8px 16px rgba(0,0,0,.35),0 7px 0 rgba(0,0,0,.22),inset 0 2px 3px rgba(255,255,255,.75),inset 0 -3px 5px rgba(0,0,0,.14);
+  transform:translateY(0);transition:transform .12s ease,box-shadow .12s ease;
   -webkit-touch-callout:none;user-select:none;-webkit-user-select:none;
 }
-.tile:active{transform:translateY(5px);box-shadow:0 2px 0 rgba(0,0,0,.28)}
+.art{position:absolute;inset:9px;border-radius:20px;background-size:cover;background-position:center;background-color:#20242e;
+  box-shadow:inset 0 3px 6px rgba(0,0,0,.35);display:none}
+.tile.cover .art{display:block}
+.tile:active{transform:translateY(5px) scale(.985);box-shadow:0 3px 8px rgba(0,0,0,.3),0 2px 0 rgba(0,0,0,.22),inset 0 2px 3px rgba(255,255,255,.6)}
 .tile .emoji{font-size:clamp(46px,9vw,72px);line-height:1.1}
 .tile .name{font-weight:700;font-size:clamp(17px,2.6vw,21px);line-height:1.15;text-align:center;
   overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.tile.playing{box-shadow:0 7px 0 rgba(0,0,0,.28),0 0 0 6px var(--fg)}
+.tile.playing{box-shadow:0 8px 16px rgba(0,0,0,.35),0 7px 0 rgba(0,0,0,.22),0 0 0 6px var(--fg)}
 .waves{position:absolute;top:14px;right:16px;display:none;gap:3px;align-items:flex-end;height:22px}
 .waves i{display:block;width:5px;border-radius:3px;background:var(--ink);height:40%;animation:wave 1s ease-in-out infinite}
 .waves i:nth-child(2){animation-delay:.2s}.waves i:nth-child(3){animation-delay:.4s}
@@ -135,13 +140,13 @@ body.spotify-open #player{display:none}
 .imgprev{width:64px;height:64px;border-radius:16px;background:#EEF0F8 center/cover no-repeat;flex:none}
 .imgpick .col{display:flex;flex-direction:column;gap:4px;min-width:0}
 .imgpick input[type=file]{font-size:14px;max-width:100%}
-.tile.cover{background-color:#282828;background-size:cover;background-position:center;justify-content:flex-end;padding:0;overflow:hidden}
+.tile.cover{background:linear-gradient(145deg,#ffffff,#dbdfe6);padding:9px;overflow:visible}
 .tile.cover .emoji{display:none}
 .tile.cover .name{display:none}
 .tile.cover .waves{background:rgba(255,255,255,.93);padding:4px 5px;border-radius:8px;height:30px;box-sizing:border-box}
-.tile.folder{box-shadow:0 7px 0 rgba(0,0,0,.28),9px -9px 0 -3px rgba(255,255,255,.45),17px -17px 0 -7px rgba(255,255,255,.25)}
-.tile.folder.playing{box-shadow:0 7px 0 rgba(0,0,0,.28),0 0 0 6px var(--fg)}
-.count{position:absolute;right:10px;bottom:10px;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:var(--paper);color:var(--ink);font-weight:800;font-size:16px;display:grid;place-items:center;box-shadow:0 2px 0 rgba(0,0,0,.2)}
+.tile.folder{box-shadow:0 8px 16px rgba(0,0,0,.3),0 7px 0 rgba(0,0,0,.22),9px -9px 0 -3px rgba(255,255,255,.45),17px -17px 0 -7px rgba(255,255,255,.25)}
+.tile.folder.playing{box-shadow:0 8px 16px rgba(0,0,0,.3),0 7px 0 rgba(0,0,0,.22),0 0 0 6px var(--fg)}
+.count{position:absolute;right:8px;bottom:8px;font-family:"Nunito",sans-serif;min-width:30px;height:30px;padding:0 9px;border-radius:999px;background:var(--paper);color:var(--ink);font-weight:800;font-size:16px;display:grid;place-items:center;box-shadow:0 2px 0 rgba(0,0,0,.2)}
 .badge{cursor:pointer}
 .hleft{display:flex;align-items:center;gap:12px;min-width:0}
 .hleft h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -192,6 +197,17 @@ body.dragmode{user-select:none;-webkit-user-select:none}
 #diceBtn{border:0;border-radius:999px;background:rgba(255,255,255,.14);background:color-mix(in srgb,var(--fg) 14%,transparent);padding:8px 14px;font-size:22px;line-height:1;flex:none}
 #diceBtn[hidden]{display:none}
 .hright{display:flex;align-items:center;gap:10px}
+#splash{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  background:var(--bar);transition:opacity .45s ease,visibility .45s}
+#splash.gone{opacity:0;visibility:hidden;pointer-events:none}
+.slogo{width:130px;height:130px;border-radius:38px;display:grid;place-items:center;font-size:62px;
+  background:linear-gradient(145deg,#ffffff,#dbdfe6);
+  box-shadow:0 14px 28px rgba(0,0,0,.4),inset 0 3px 4px rgba(255,255,255,.9),inset 0 -4px 6px rgba(0,0,0,.15);
+  animation:breathe 3s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.05)}}
+.sname{font-family:"Fredoka","Nunito",sans-serif;font-weight:700;font-size:40px;letter-spacing:1px;color:#fff}
+.sclaim{font-size:17px;color:rgba(255,255,255,.7);letter-spacing:2px;text-transform:uppercase}
+@media (prefers-reduced-motion: reduce){.slogo{animation:none}}
 #toast{
   position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);
   background:var(--paper);color:var(--ink);padding:10px 18px;border-radius:16px;font-weight:700;font-size:16px;
@@ -207,8 +223,13 @@ body.dragmode{user-select:none;-webkit-user-select:none}
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <div class="slogo"><span>🐾</span></div>
+  <div class="sname">TheoBox</div>
+  <div class="sclaim">Hören &amp; Träumen</div>
+</div>
 <header>
-  <div class="hleft"><button id="backBtn" type="button" hidden>‹ Zurück</button><h1 id="hTitle">Hörbox</h1></div>
+  <div class="hleft"><button id="backBtn" type="button" hidden>‹ Zurück</button><h1 id="hTitle">TheoBox</h1></div>
   <div class="hright"><button id="diceBtn" type="button" hidden aria-label="Zufällig auswählen">🎲</button></div>
   <button id="editBtn" type="button" hidden aria-label="Bearbeiten"><span>Bearbeiten</span></button>
 </header>
@@ -319,7 +340,7 @@ body.dragmode{user-select:none;-webkit-user-select:none}
 <script>
 /* ============================================================
    FIREBASE: Hier die Konfiguration einfügen (z. B. die vom Wochenboard).
-   Ohne Konfiguration speichert die Hörbox nur auf dem jeweiligen Gerät.
+   Ohne Konfiguration speichert die TheoBox nur auf dem jeweiligen Gerät.
    Beispiel:
    const FIREBASE_CONFIG = {
      apiKey: "…", authDomain: "…", projectId: "…",
@@ -411,7 +432,7 @@ function renderGrid(){
   grid.innerHTML='';
   if(folder&&!tiles.some(x=>x.id===folder))folder=null;
   const f=folder?tiles.find(x=>x.id===folder):null;
-  $('backBtn').hidden=!f;$('hTitle').textContent=f?f.name:'Hörbox';
+  $('backBtn').hidden=!f;$('hTitle').textContent=f?f.name:'TheoBox';
   const playingId=spotId||(cur&&!audio.paused?cur.tile.id:null)||(spNow&&spNow.state&&spNow.state.is_playing?spNow.tile.id:null);
   const playingParent=(tiles.find(x=>x.id===playingId)||{}).parent||null;
   const list=tiles.filter(t=>(t.parent||null)===folder);
@@ -421,9 +442,9 @@ function renderGrid(){
     b.type='button';b.className='tile'+(isF?' folder':'')+(t.id===playingId||t.id===playingParent?' playing':'');
     b.style.setProperty('--c',t.color);
     const pic=t.img||t.cover;
-    if(pic){b.classList.add('cover');b.style.backgroundImage=`url("${String(pic).replace(/["\\)]/g,'')}")`}
+    if(pic)b.classList.add('cover');
     const n=isF?tiles.filter(x=>x.parent===t.id).length:0;
-    b.innerHTML=`<span class="emoji" aria-hidden="true">${esc(t.emoji)}</span><span class="name">${esc(t.name)}</span><span class="waves" aria-hidden="true"><i></i><i></i><i></i></span>`+typeBadge(t)+(isF?`<span class="count" aria-hidden="true">${n}</span>`:'')+(editMode?'<span class="badge" role="button" aria-label="Bearbeiten">✎</span>':'');
+    b.innerHTML=(pic?`<span class="art" style="background-image:url(&quot;${esc(String(pic).replace(/["\\)]/g,''))}&quot;)"></span>`:'')+`<span class="emoji" aria-hidden="true">${esc(t.emoji)}</span><span class="name">${esc(t.name)}</span><span class="waves" aria-hidden="true"><i></i><i></i><i></i></span>`+typeBadge(t)+(isF?`<span class="count" aria-hidden="true">${n}</span>`:'')+(editMode?'<span class="badge" role="button" aria-label="Bearbeiten">✎</span>':'');
     const kindName=isF?'Ordner':t.kind==='open'?'Öffnen':t.kind==='files'?'MP3':t.kind==='link'?'Webradio':(spotEmbed(t.url)||{}).type==='show'?'Podcast':'Spotify';
     b.setAttribute('aria-label',(editMode?'Bearbeiten: ':'')+kindName+': '+t.name);
     b.dataset.id=t.id;
@@ -539,7 +560,7 @@ function step(d){
 function setMedia(){
   if(!('mediaSession' in navigator)||!cur)return;
   try{
-    navigator.mediaSession.metadata=new MediaMetadata({title:cur.tile.name,artist:cur.tile.kind==='link'?'Webradio':`Teil ${cur.index+1}`,album:'Hörbox'});
+    navigator.mediaSession.metadata=new MediaMetadata({title:cur.tile.name,artist:cur.tile.kind==='link'?'Webradio':`Teil ${cur.index+1}`,album:'TheoBox'});
     navigator.mediaSession.setActionHandler('play',togglePlay);
     navigator.mediaSession.setActionHandler('pause',togglePlay);
     navigator.mediaSession.setActionHandler('nexttrack',()=>step(1));
@@ -748,7 +769,7 @@ $('exportBtn').onclick=async()=>{
     if(withFiles)for(const id of fileIds){try{const b=await getFile(id);if(b)files[id]=await blobToData(b)}catch(e){}}
     const data={app:'hoerbox',v:1,date:new Date().toISOString(),tiles:withFiles?tiles:tiles.map(t=>t.kind==='files'?{...t,files:[],names:[]}:t),files};
     const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`hoerbox-${new Date().toISOString().slice(0,10)}.json`;
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`theobox-${new Date().toISOString().slice(0,10)}.json`;
     document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
     toast('Exportiert.');
   }catch(e){toast('Export hat nicht geklappt.')}
@@ -757,8 +778,8 @@ $('exportBtn').onclick=async()=>{
 $('importBtn').onclick=()=>$('importFile').click();
 $('importFile').addEventListener('change',async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
-  let data;try{data=JSON.parse(await f.text())}catch(err){toast('Die Datei ist keine Hörbox-Sicherung.');return}
-  if(!data||data.app!=='hoerbox'||!Array.isArray(data.tiles)){toast('Die Datei ist keine Hörbox-Sicherung.');return}
+  let data;try{data=JSON.parse(await f.text())}catch(err){toast('Die Datei ist keine TheoBox-Sicherung.');return}
+  if(!data||data.app!=='hoerbox'||!Array.isArray(data.tiles)){toast('Die Datei ist keine TheoBox-Sicherung.');return}
   try{
     for(const[id,url]of Object.entries(data.files||{})){const b=await (await fetch(url)).blob();await putFile(id,b)}
     const byId=new Map(tiles.map(t=>[t.id,t]));
@@ -845,13 +866,13 @@ async function spLogin(){
 function spSaveToken(j){const old=loadJSON('sp.token',null)||{};saveJSON('sp.token',{access:j.access_token,refresh:j.refresh_token||old.refresh,exp:Date.now()+((j.expires_in||3600)-60)*1000});if(j.scope)saveJSON('sp.scopes',j.scope);sdkInit()}
 function spCanStream(){return String(loadJSON('sp.scopes','')||'').includes('streaming')}
 
-/* Wiedergabe direkt in der Hörbox (Web Playback SDK) */
+/* Wiedergabe direkt in der TheoBox (Web Playback SDK) */
 let sdkPlayer=null,sdkId=null,sdkReady=false,sdkActivated=false,sdkTries=0;
 window.onSpotifyWebPlaybackSDKReady=()=>sdkInit();
 function sdkInit(){
   if(sdkPlayer||!window.Spotify||!spLogged()||!spCanStream())return;
   try{
-    sdkPlayer=new window.Spotify.Player({name:'Hörbox',volume:.8,
+    sdkPlayer=new window.Spotify.Player({name:'TheoBox',volume:.8,
       getOAuthToken:async cb=>{let t=null;try{t=await spToken()}catch(e){}cb(t||'')}});
     sdkPlayer.addListener('ready',({device_id})=>{sdkId=device_id;sdkReady=true;sdkTries=0;spRenderState()});
     sdkPlayer.addListener('not_ready',()=>{sdkReady=false});
@@ -915,7 +936,7 @@ async function spDevices(){return((await sp('/me/player/devices'))||{}).devices|
 async function spPickDevice(){
   const d=await spDevices();
   let pref=null;try{pref=localStorage.getItem('sp.device')}catch(e){}
-  if(sdkReady&&sdkId&&(!pref||pref===sdkId))return{id:sdkId,name:'Hörbox'};
+  if(sdkReady&&sdkId&&(!pref||pref===sdkId))return{id:sdkId,name:'TheoBox'};
   if(!d.length)return null;
   const own=/iPhone|Android.*Mobile/i.test(navigator.userAgent)?'smartphone':(/iPad/i.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1))?'tablet':'computer';
   const chosen=d.find(x=>x.id===pref);if(chosen)return chosen;
@@ -926,7 +947,7 @@ async function spPickDevice(){
 function spWake(t,opts){
   spPending={t,opts};
   openSheet('Spotify schläft gerade');
-  $('sFrame').innerHTML='<p class="slist-msg">iOS hat Spotify im Hintergrund schlafen gelegt. Einmal kurz öffnen und direkt zurück zur Hörbox wechseln, dann startet es von selbst.</p><button type="button" class="epcont" id="wakeBtn">Spotify öffnen</button>';
+  $('sFrame').innerHTML='<p class="slist-msg">iOS hat Spotify im Hintergrund schlafen gelegt. Einmal kurz öffnen und direkt zurück zur TheoBox wechseln, dann startet es von selbst.</p><button type="button" class="epcont" id="wakeBtn">Spotify öffnen</button>';
   $('wakeBtn').onclick=()=>{location.href='spotify://'};
 }
 const MAXALB=300;
@@ -1116,9 +1137,9 @@ function spRenderState(){
   const on=spLogged();
   $('spBtn').textContent=on?'Spotify abmelden':'Mit Spotify verbinden';
   $('spState').textContent=!on?'Spotify nicht verbunden: Spotify-Kacheln spielen im kleinen Player, oft nur als Vorschau.'
-    :!spCanStream()?'Spotify ist verbunden. Für Wiedergabe direkt in der Hörbox einmal abmelden und neu verbinden.'
-    :sdkReady?'Spotify ist verbunden. Die Musik läuft direkt hier in der Hörbox, die Spotify-App muss nicht offen sein.'
-    :'Spotify ist verbunden. Wiedergabe in der Hörbox wird vorbereitet, sonst läuft es über die Spotify-App.';
+    :!spCanStream()?'Spotify ist verbunden. Für Wiedergabe direkt in der TheoBox einmal abmelden und neu verbinden.'
+    :sdkReady?'Spotify ist verbunden. Die Musik läuft direkt hier in der TheoBox, die Spotify-App muss nicht offen sein.'
+    :'Spotify ist verbunden. Wiedergabe in der TheoBox wird vorbereitet, sonst läuft es über die Spotify-App.';
 }
 $('spBtn').onclick=()=>{
   if(spLogged()){if(!confirm('Spotify auf diesem Gerät abmelden?'))return;try{localStorage.removeItem('sp.token')}catch(e){}spNow=null;renderPlayer();spRenderState();toast('Spotify abgemeldet.')}
@@ -1187,9 +1208,9 @@ function openInApp(t){
 }
 function renderSpMode(){
   const app=spMode()==='app';
-  $('spModeBtn').textContent=app?'Spotify-Kacheln: in Spotify öffnen':'Spotify-Kacheln: in der Hörbox abspielen';
+  $('spModeBtn').textContent=app?'Spotify-Kacheln: in Spotify öffnen':'Spotify-Kacheln: in der TheoBox abspielen';
 }
-$('spModeBtn').onclick=()=>{saveJSON('hoerbox.spmode',spMode()==='app'?'box':'app');renderSpMode();toast(spMode()==='app'?'Kacheln öffnen jetzt die Spotify-App.':'Kacheln spielen jetzt in der Hörbox.')};
+$('spModeBtn').onclick=()=>{saveJSON('hoerbox.spmode',spMode()==='app'?'box':'app');renderSpMode();toast(spMode()==='app'?'Kacheln öffnen jetzt die Spotify-App.':'Kacheln spielen jetzt in der TheoBox.')};
 renderSpMode();
 $('doneBtn').onclick=()=>{setEdit(false);window.scrollTo(0,0)};
 
@@ -1247,6 +1268,7 @@ function initSync(){
 }
 
 renderGrid();renderPlayer();sleepLabel();initSync();
+(()=>{const sp=$('splash');const go=()=>sp.classList.add('gone');setTimeout(go,1600);sp.addEventListener('click',go)})();
 (async()=>{let changed=false;
   for(const t of tiles){if(!(t.kind==='spotify'||(t.kind==='folder'&&t.url))||t.cover||t.img)continue;const e=spotEmbed(t.url);if(!e)continue;
     const m=await spotMeta(e);if(m&&m.cover){t.cover=m.cover;changed=true}}
