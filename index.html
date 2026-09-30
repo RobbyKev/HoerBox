@@ -502,6 +502,22 @@ function sfx(freqs,vol=.12,len=.3){
   // Die Tonausgabe wacht erst auf – Ton nachreichen, sobald sie läuft
   try{a.resume().then(()=>{if(a.state==='running')sfxTones(a,freqs,vol,len)}).catch(()=>{})}catch(e){}
 }
+/* Wenn die drei MP3s im Ordner sounds/ liegen, klingen sie statt der erzeugten Töne */
+const SFX_FILES={plopp:'sounds/plopp.mp3',klack:'sounds/klack.mp3',akkord:'sounds/akkord.mp3'};
+const sfxCache={};
+function sfxPlay(name,freqs,vol=.12,len=.3){
+  if(!sfxOn())return;
+  const src=SFX_FILES[name];
+  if(!src){sfx(freqs,vol,len);return}
+  try{
+    let base=sfxCache[name];
+    if(!base){base=new Audio(src);base.preload='auto';sfxCache[name]=base}
+    const a=base.cloneNode();
+    a.volume=Math.min(1,vol*5);
+    const pr=a.play();
+    if(pr&&pr.catch)pr.catch(()=>sfx(freqs,vol,len));
+  }catch(e){sfx(freqs,vol,len)}
+}
 function sfxWake(){
   const a=sfxCtx();if(!a)return;
   try{
@@ -543,7 +559,7 @@ function renderGrid(){
     b.addEventListener('pointerdown',e=>dragDown(e,b,t));
     b.onclick=e=>{
       if(Date.now()<noClickUntil)return;
-      sfx(isF?[420,620]:[300,520],.1,.16);
+      sfxPlay(isF?'klack':'plopp',isF?[420,620]:[300,520],.1,.16);
       if(editMode&&(!isF||e.target.closest('.badge'))){openEditor(t);return}
       if(isF){folder=t.id;window.scrollTo(0,0);renderGrid();return}
       playTile(t);
@@ -559,7 +575,7 @@ function renderGrid(){
   empty.hidden=!!list.length||editMode;
   empty.innerHTML=f?'<strong>Dieser Ordner ist noch leer.</strong>Halte oben rechts „Bearbeiten“ gedrückt und lege hier Kacheln an.':'<strong>Noch leer hier.</strong>Halte oben rechts „Bearbeiten“ gedrückt und füge Webradio oder MP3s hinzu.';
 }
-$('backBtn').onclick=()=>{sfx([520,330],.1,.16);folder=null;renderGrid()};
+$('backBtn').onclick=()=>{sfxPlay('klack',[520,330],.1,.16);folder=null;renderGrid()};
 
 /* Wiedergabe */
 function savePos(){if(cur&&cur.tile.kind==='files'&&!isNaN(audio.currentTime)){pos[cur.tile.id]={i:cur.index,t:audio.currentTime};saveJSON('hoerbox.pos',pos)}}
@@ -1343,7 +1359,7 @@ $('splashBtn').onclick=()=>{const m=loadJSON('hoerbox.splash','voll');
   saveJSON('hoerbox.splash',SPLASH_MODES[(SPLASH_MODES.indexOf(m)+1)%SPLASH_MODES.length]);renderSplashBtn();toast('Gilt ab dem nächsten Start.')};
 renderSplashBtn();
 function renderSoundBtn(){$('soundBtn').textContent='Töne: '+(sfxOn()?'an':'aus')}
-$('soundBtn').onclick=()=>{saveJSON('hoerbox.sound',!sfxOn());renderSoundBtn();sfxCtx();if(sfxOn())sfx([523.25,784],.12,.25)};
+$('soundBtn').onclick=()=>{saveJSON('hoerbox.sound',!sfxOn());renderSoundBtn();sfxCtx();if(sfxOn())sfxPlay('akkord',[523.25,784],.12,.25)};
 renderSoundBtn();
 
 /* Fünfmal auf den Titel tippen schaltet den Bearbeiten-Modus um */
@@ -1405,14 +1421,15 @@ renderGrid();renderPlayer();sleepLabel();initSync();
   const mode=loadJSON('hoerbox.splash','voll');
   let done=false;
   const audio=sfxCtx;
-  const go=()=>{if(done)return;done=true;sfx([523.25,659.25,783.99],.12,.35);
+  const go=()=>{if(done)return;done=true;sfxPlay('akkord',[523.25,659.25,783.99],.12,.35);
     sp.classList.add('gone');setTimeout(()=>{sp.style.display='none'},700)};
   const fast=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   window.addEventListener('pointerdown',()=>audio(),{once:true});
   if(mode==='aus'||fast){sp.style.display='none';return}
   if(mode==='kurz')sp.classList.add('short');
   const run=()=>{
-    sfx([160,420],.18,.14);
+    sfxPlay('plopp',[160,420],.18,.14);
+    setTimeout(()=>sfxPlay('klack',[820,620],.12,.1),620);
     if(navigator.vibrate){try{navigator.vibrate(20);setTimeout(()=>navigator.vibrate(25),mode==='kurz'?1400:4100)}catch(e){}}
     setTimeout(go,mode==='kurz'?1500:4200);
   };
@@ -1424,7 +1441,8 @@ renderGrid();renderPlayer();sleepLabel();initSync();
     });
     return;
   }
-  setTimeout(()=>sfx([160,420],.18,.14),220);
+  setTimeout(()=>sfxPlay('plopp',[160,420],.18,.14),220);
+  setTimeout(()=>sfxPlay('klack',[820,620],.12,.1),820);
   setTimeout(go,mode==='kurz'?1500:4200);
   sp.addEventListener('click',()=>{audio();go()});
   if(navigator.vibrate){try{setTimeout(()=>navigator.vibrate(20),250);setTimeout(()=>navigator.vibrate(25),mode==='kurz'?1400:4100)}catch(e){}}
