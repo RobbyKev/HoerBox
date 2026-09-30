@@ -222,25 +222,26 @@ body.sky .moon{opacity:.85}
 .sbox{position:relative;width:62%;aspect-ratio:1;border-radius:30px;display:grid;place-items:center;z-index:10;
   background:linear-gradient(145deg,#ffffff,#dbdfe6);
   box-shadow:0 16px 30px rgba(0,0,0,.45),inset 0 3px 4px rgba(255,255,255,.9),inset 0 -5px 8px rgba(0,0,0,.16);
-  transform:scale(0);animation:pop .8s cubic-bezier(.18,1.5,.4,1) forwards}
+  transform:scale(0);animation:pop .8s cubic-bezier(.18,1.5,.4,1) forwards,breath 2.4s ease-in-out infinite 1s}
+@keyframes breath{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
 @keyframes pop{0%{transform:scale(0) rotate(-12deg)}60%{transform:scale(1.12) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
 .sface{font-family:"Fredoka","Nunito",sans-serif;font-weight:700;font-size:clamp(20px,5.2vw,26px);color:#2B2D42;letter-spacing:.5px;user-select:none}
-.fly{position:fixed;font-size:34px;opacity:0;animation:fly 2.6s cubic-bezier(.16,1,.3,1) forwards;pointer-events:none;z-index:5;
-  filter:drop-shadow(0 4px 8px rgba(0,0,0,.25))}
-.fly.f1{left:3vw;top:8vh;animation-delay:.4s;--dx:42vw;--dy:38vh;--rot:25deg}
-.fly.f2{right:4vw;top:12vh;animation-delay:.6s;--dx:-41vw;--dy:34vh;--rot:-30deg}
-.fly.f3{left:5vw;bottom:12vh;animation-delay:.8s;--dx:40vw;--dy:-34vh;--rot:40deg}
-.fly.f4{right:5vw;bottom:10vh;animation-delay:1s;--dx:-40vw;--dy:-36vh;--rot:-20deg}
-.fly.f5{left:46vw;top:2vh;animation-delay:1.2s;--dx:1vw;--dy:43vh;--rot:15deg}
-.fly.f6{right:44vw;bottom:2vh;animation-delay:1.4s;--dx:-1vw;--dy:-43vh;--rot:-35deg}
-.fly.f7{left:20vw;top:4vh;animation-delay:1.55s;--dx:25vw;--dy:42vh;--rot:-25deg}
-.fly.f8{right:18vw;top:6vh;animation-delay:1.7s;--dx:-27vw;--dy:40vh;--rot:30deg}
-.fly.f9{left:15vw;bottom:6vh;animation-delay:1.85s;--dx:30vw;--dy:-40vh;--rot:18deg}
-.fly.f10{right:16vw;bottom:5vh;animation-delay:2s;--dx:-29vw;--dy:-41vh;--rot:-15deg}
-.fly.f11{left:2vw;top:45vh;animation-delay:2.15s;--dx:43vw;--dy:2vh;--rot:35deg}
-.fly.f12{right:2vw;top:48vh;animation-delay:2.3s;--dx:-43vw;--dy:-1vh;--rot:-40deg}
-@keyframes fly{0%{opacity:0;transform:translate(0,0) scale(1.3) rotate(0)}15%{opacity:1}85%{opacity:.9}
-  100%{opacity:0;transform:translate(var(--dx,0),var(--dy,0)) scale(.1) rotate(var(--rot,30deg))}}
+.fly{position:fixed;font-size:var(--sz,34px);opacity:0;animation:fly 2.6s cubic-bezier(.16,1,.3,1) forwards;pointer-events:none;z-index:5;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.25)) blur(var(--bl,0px));will-change:transform,opacity}
+.fly.f1{left:3vw;top:8vh;animation-delay:.4s;--dx:42vw;--dy:38vh;--rot:25deg;--sz:42px;--bl:1px}
+.fly.f2{right:4vw;top:12vh;animation-delay:.6s;--dx:-41vw;--dy:34vh;--rot:-30deg;--sz:28px}
+.fly.f3{left:5vw;bottom:12vh;animation-delay:.8s;--dx:40vw;--dy:-34vh;--rot:40deg;--sz:34px}
+.fly.f4{right:5vw;bottom:10vh;animation-delay:1s;--dx:-40vw;--dy:-36vh;--rot:-20deg;--sz:44px;--bl:1.2px}
+.fly.f5{left:46vw;top:2vh;animation-delay:1.2s;--dx:1vw;--dy:43vh;--rot:15deg;--sz:26px}
+.fly.f6{right:44vw;bottom:2vh;animation-delay:1.4s;--dx:-1vw;--dy:-43vh;--rot:-35deg;--sz:36px}
+.fly.f7{left:20vw;top:4vh;animation-delay:1.55s;--dx:25vw;--dy:42vh;--rot:-25deg;--sz:30px}
+.fly.f8{right:18vw;top:6vh;animation-delay:1.7s;--dx:-27vw;--dy:40vh;--rot:30deg;--sz:42px}
+.fly.f9{left:15vw;bottom:6vh;animation-delay:1.85s;--dx:30vw;--dy:-40vh;--rot:18deg;--sz:28px}
+.fly.f10{right:16vw;bottom:5vh;animation-delay:2s;--dx:-29vw;--dy:-41vh;--rot:-15deg;--sz:38px}
+.fly.f11{left:2vw;top:45vh;animation-delay:2.15s;--dx:43vw;--dy:2vh;--rot:35deg;--sz:32px}
+.fly.f12{right:2vw;top:48vh;animation-delay:2.3s;--dx:-43vw;--dy:-1vh;--rot:-40deg;--sz:48px;--bl:1.5px}
+@keyframes fly{0%{opacity:0;transform:translate3d(0,0,0) scale(1.3) rotate(0)}15%{opacity:1}85%{opacity:.9}
+  100%{opacity:0;transform:translate3d(var(--dx,0),var(--dy,0),0) scale(.05) rotate(var(--rot,30deg))}}
 #splash.short .fly{display:none}
 #splash.hold .sbox,#splash.hold .fly{animation-play-state:paused}
 .shint{position:absolute;bottom:14vh;left:0;right:0;text-align:center;color:rgba(255,255,255,.8);
