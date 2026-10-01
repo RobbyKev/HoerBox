@@ -34,6 +34,8 @@ header,main,#tools{position:relative;z-index:1}
 header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:18px 20px 6px;max-width:1100px;margin:0 auto}
 header .hleft{justify-self:start}
 header h1{justify-self:center;text-align:center}
+.wm{display:inline-block}
+.wm em{font-style:normal;font-weight:500;opacity:.72;margin-left:1px}
 header .hright{justify-self:end}
 h1{margin:0;font-family:"Fredoka","Nunito",ui-rounded,system-ui,sans-serif;font-size:clamp(30px,6vw,44px);font-weight:700;letter-spacing:.5px;line-height:1;text-shadow:0 2px 6px rgba(0,0,0,.25)}
 h2,.tile .name,#hTitle{font-family:"Fredoka","Nunito",ui-rounded,system-ui,sans-serif}
@@ -215,6 +217,95 @@ body.sky .moon{opacity:.85}
 .shoot{width:120px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.95));
   filter:drop-shadow(0 0 6px rgba(255,255,255,.7));opacity:0}
 @media (prefers-reduced-motion: reduce){.sky-layer{animation:none}.shoot{display:none}}
+/* ===== Tag/Nacht-Schalter – nach "Dark Mode Toggle" von Jhey Tompkins (@jh3yy), CodePen ===== */
+#dayNight{
+  --slide-ease:cubic-bezier(.4,-0.3,.6,1.3);
+  --easing:var(--slide-ease);
+  --speed:.5s;
+  --width:clamp(104px,22vmin,150px);
+  --ar:8 / 3;
+  --ray:hsl(0 0% 100% / .5);
+  --sun:hsl(47,91%,58%);
+  --moon:hsl(212,13%,82%);
+  --crater:hsl(221,16%,68%);
+  --bear-speed:10s;
+  display:flex;justify-content:center;margin:10px auto 2px;position:relative;z-index:1;
+}
+.toggle__backdrop:first-of-type .clouds path:first-of-type{fill:var(--ray)}
+.toggle{
+  -webkit-tap-highlight-color:transparent;width:var(--width);z-index:10;will-change:transform;isolation:isolate;
+  transform:translate3d(0,0,0);aspect-ratio:var(--ar);border-radius:100vh;border:0;position:relative;padding:0;
+  overflow:hidden;cursor:pointer;transition:background var(--speed) var(--easing);outline-color:transparent;
+  background:hsl(calc(204 + (var(--dark,0) * 25)) calc((53 - (var(--dark,0) * 28)) * 1%) calc((47 - (var(--dark,0) * 31)) * 1%));
+  box-shadow:
+    calc(var(--width) * 0) calc(var(--width) * .02) calc(var(--width) * .01) calc(var(--width) * -.0025) hsl(210 10% 100% / .95),
+    calc(var(--width) * 0) calc(var(--width) * -.02) calc(var(--width) * .01) calc(var(--width) * -.0025) hsl(210 10% 10% / .2),
+    calc(var(--width) * 0) calc(var(--width) * .02) calc(var(--width) * .5) 0 hsl(210 10% 100% / .15);
+}
+.toggle:after{
+  content:"";position:absolute;inset:0;border-radius:100vh;
+  box-shadow:
+    calc(var(--width) * 0) calc(var(--width) * -.025) calc(var(--width) * .025) 0 hsl(210 10% 10% / .15) inset,
+    calc(var(--width) * 0) calc(var(--width) * .025) calc(var(--width) * .025) 0 hsl(210 10% 10% / .65) inset;
+}
+.toggle__content{position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;border-radius:100vh;display:block;
+  clip-path:inset(0 0 0 0 round 100vh);container-type:inline-size}
+.toggle__backdrop{overflow:visible!important;position:absolute;bottom:0;width:100%;left:0;
+  transition:translate var(--speed) var(--easing);
+  translate:0 calc(var(--dark,0) * (100% - (3 / 8 * var(--width))))}
+[aria-pressed=false] .toggle__backdrop:last-of-type{transition-timing-function:cubic-bezier(.2,-0.6,.7,1.6)}
+[aria-pressed=false] .stars path{transition-delay:0s}
+.stars path{transform-box:fill-box;transform-origin:25% 50%;scale:calc(.25 + (var(--dark,0) * .75));
+  transition:scale var(--speed) calc(var(--speed) * .5) var(--easing)}
+.toggle__indicator{height:100%;aspect-ratio:1;border-radius:0;display:grid;place-items:center;padding:3%;
+  transition:translate var(--speed) var(--slide-ease);translate:calc(var(--dark,0) * (100cqi - 100%)) 0}
+.toggle__star{height:100%;aspect-ratio:1;border-radius:50%;position:relative;
+  transition:translate var(--speed) var(--easing);translate:calc((var(--dark,0) * -10%) + 5%) 0}
+.sun{background:var(--sun);position:absolute;inset:0;border-radius:50%;overflow:hidden;
+  box-shadow:
+    calc(var(--width) * .01) calc(var(--width) * .01) calc(var(--width) * .02) 0 hsl(210 10% 100% / .95) inset,
+    calc(var(--width) * -.01) calc(var(--width) * -.01) calc(var(--width) * .02) 0 hsl(210 10% 20% / .5) inset}
+.moon{position:absolute;inset:-1%;border-radius:50%;background:var(--moon);
+  transition:translate var(--speed) ease-in-out;translate:calc((100 - (var(--dark,0) * 100)) * 1%) 0%;
+  box-shadow:
+    calc(var(--width) * .01) calc(var(--width) * .01) calc(var(--width) * .02) 0 hsl(210 10% 100% / .95) inset,
+    calc(var(--width) * -.01) calc(var(--width) * -.01) calc(var(--width) * .02) 0 hsl(210 10% 10% / .95) inset}
+.moon__crater{position:absolute;background:var(--crater);border-radius:50%;width:calc(var(--size,10) * 1%);
+  aspect-ratio:1;left:calc(var(--x) * 1%);top:calc(var(--y) * 1%);
+  box-shadow:
+    calc(var(--width) * .01) calc(var(--width) * .01) calc(var(--width) * .01) 0 hsl(210 10% 6% / .25) inset,
+    0 calc(var(--width) * .005) calc(var(--width) * .01) 0 hsl(210 10% 100% / .25)}
+.moon__crater:nth-of-type(1){--size:18;--x:40;--y:15}
+.moon__crater:nth-of-type(2){--size:20;--x:65;--y:58}
+.moon__crater:nth-of-type(3){--size:34;--x:18;--y:40}
+.toggle__star:before{content:"";z-index:-1;width:356%;border-radius:50%;aspect-ratio:1;position:absolute;top:50%;left:50%;
+  background:radial-gradient(hsl(0 0% 100% / .25) 40%,transparent 40.5%),
+             radial-gradient(hsl(0 0% 100% / .25) 56%,transparent 56.5%) hsl(0 0% 100% / .25);
+  transition:translate var(--speed) var(--easing);translate:calc((50 - (var(--dark,0) * 4)) * -1%) -50%}
+.toggle__star:after{content:"";position:absolute;inset:0;display:block;background:hsl(0 0% 0% / .5);
+  filter:blur(4px);translate:2% 4%;border-radius:50%;z-index:-1}
+.toggle__indicator-wrapper{position:absolute;inset:0}
+.toggle[aria-pressed=true]{--dark:1}
+.stars g{transform-box:fill-box;transform-origin:50% 50%}
+.stars g:nth-of-type(3){animation:twinkle 4s -2s infinite}
+.stars g:nth-of-type(11){animation:twinkle 6s -2s infinite}
+.stars g:nth-of-type(9){animation:twinkle 4s -1s infinite}
+@keyframes twinkle{0%,40%,60%,100%{transform:scale(1)}50%{transform:scale(0)}}
+.astrobear{width:12%;position:absolute;top:100%;left:0;
+  transition:translate calc(var(--speed) + (var(--dark,0) * (var(--bear-speed) - var(--speed)))) calc(var(--bear-speed) * (.4 * var(--dark,0))) linear;
+  translate:calc(var(--dark,0) * 400%) calc(var(--dark,0) * -350%)}
+.astrobear svg{transform-origin:50% 75%;scale:var(--dark,0);rotate:calc(var(--dark,0) * 360deg);
+  transition:rotate calc(var(--speed) + (var(--dark,0) * (var(--bear-speed) - var(--speed)))) calc(var(--bear-speed) * .4) linear, scale var(--speed) ease-in-out}
+.astrobear__container{position:absolute;overflow:hidden;inset:0;clip-path:inset(0 0 0 0);opacity:var(--dark,0);
+  translate:0 calc(-200% + (var(--dark,0) * 200%));
+  transition:opacity var(--speed) var(--easing), translate var(--speed) var(--easing)}
+.pilot__container{position:absolute;overflow:hidden;inset:0;clip-path:inset(0 0 0 0);opacity:calc(1 - var(--dark,0));
+  translate:0 calc(var(--dark,0) * 200%);
+  transition:opacity var(--speed) var(--easing), translate var(--speed) var(--easing)}
+.pilot-bear{width:18%;position:absolute;top:70%;left:100%;
+  transition:translate calc(var(--speed) + ((1 - var(--dark,0)) * ((var(--bear-speed) * .5) - var(--speed)))) calc((var(--bear-speed) * .5) * ((1 - var(--dark,0)) * .4)) linear;
+  translate:calc((0 - (1 - var(--dark,0))) * (var(--width) + 100%)) calc((0 - (1 - var(--dark,0))) * (200%))}
+
 #splash{position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;
   background:var(--bar);transition:opacity .7s ease,transform .7s ease,visibility .7s;will-change:transform,opacity;cursor:pointer}
 #splash.gone{opacity:0;transform:scale(1.35);visibility:hidden;pointer-events:none}
@@ -326,13 +417,104 @@ body.sky .moon{opacity:.85}
 <div class="moon" aria-hidden="true"></div>
 <header>
   <div class="hleft"><button id="backBtn" type="button" hidden>‹ Zurück</button></div>
-  <h1 id="hTitle">TheoBox</h1>
+  <h1 id="hTitle"><span class="wm">Theo<em>Box</em></span></h1>
   <div class="hright"><button id="diceBtn" type="button" hidden aria-label="Zufällig auswählen">🎲</button></div>
   <button id="editBtn" type="button" hidden aria-label="Bearbeiten"><span>Bearbeiten</span></button>
 </header>
+<div id="dayNight">
+      <!-- Schalter nach "Dark Mode Toggle" von Jhey Tompkins (@jh3yy), CodePen -->
+      <button class="toggle" type="button" aria-pressed="false" title="Tag / Nacht">
+        <span class="toggle__content">
+          <svg aria-hidden="true" class="toggle__backdrop" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 290 228">
+            <g class="clouds"><path fill="#D9D9D9" d="M335 147.5c0 27.89-22.61 50.5-50.5 50.5a50.78 50.78 0 0 1-9.29-.853c-2.478 12.606-10.595 23.188-21.615 29.011C245.699 243.749 228.03 256 207.5 256a50.433 50.433 0 0 1-16.034-2.599A41.811 41.811 0 0 1 166 262a41.798 41.798 0 0 1-22.893-6.782A42.21 42.21 0 0 1 135 256a41.82 41.82 0 0 1-19.115-4.592A41.84 41.84 0 0 1 88 262c-1.827 0-3.626-.117-5.391-.343C74.911 270.448 63.604 276 51 276c-23.196 0-42-18.804-42-42s18.804-42 42-42c1.827 0 3.626.117 5.391.343C64.089 183.552 75.396 178 88 178a41.819 41.819 0 0 1 19.115 4.592C114.532 176.002 124.298 172 135 172a41.798 41.798 0 0 1 22.893 6.782 42.066 42.066 0 0 1 7.239-.773C174.137 164.159 189.749 155 207.5 155c.601 0 1.199.01 1.794.031A41.813 41.813 0 0 1 234 147h.002c.269-27.66 22.774-50 50.498-50 27.89 0 50.5 22.61 50.5 50.5Z"/></g>
+          </svg>
+          <span aria-hidden="true" class="pilot__container">
+            <span class="pilot-bear">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 1448 938">
+                <path fill="#AF7128" fill-rule="evenodd" d="M869.02 210.61c16.067-3.967 27.98-18.476 27.98-35.768C897 154.495 880.505 138 860.158 138c-14.337 0-26.761 8.19-32.85 20.146C815.313 151.674 801.586 148 787 148h-20c-14.52 0-28.19 3.641-40.146 10.059C720.749 146.15 708.351 138 694.048 138c-20.347 0-36.842 16.495-36.842 36.842 0 17.222 11.818 31.685 27.787 35.72A85.104 85.104 0 0 0 682 233v225c0 12.15 9.85 22 22 22h44c12.15 0 22-9.85 22-22v-28.69a41.072 41.072 0 0 0 14 .174V458c0 12.15 9.85 22 22 22h44c12.15 0 22-9.85 22-22v-74.797a28.992 28.992 0 0 0 6.946-5.137l44.548-44.548c11.325-11.325 11.325-29.687 0-41.012s-29.687-11.325-41.012 0L872 302.988V233a85.094 85.094 0 0 0-2.98-22.39Z" clip-rule="evenodd"/>
+                <path fill="#FF1E1E" d="M821.678 205.665h-88.371v13.25h88.371z"/>
+                <path fill="#000" fill-rule="evenodd" d="M709.7 164.481c-17.939 14.394-28.018 37.148-28.018 57.504h61.648c.087-13.669 11.194-24.723 24.883-24.723h18.56c13.689 0 24.796 11.054 24.883 24.723H873c0-20.356-10.078-43.11-28.018-57.504C827.043 150.086 802.711 142 777.341 142c-25.37 0-49.701 8.086-67.641 22.481Z" clip-rule="evenodd"/>
+                <circle cx="8.079" cy="8.079" r="8.079" fill="#000" transform="matrix(-1 0 0 1 730.414 240)"/>
+                <circle cx="8.079" cy="8.079" r="8.079" fill="#000" transform="matrix(-1 0 0 1 839 240)"/>
+                <path fill="#000" d="M755.835 262.683c0 8.21 9.868 17.451 20.845 17.451 10.977 0 20.845-9.241 20.845-17.451s-9.868-12.281-20.845-12.281c-10.977 0-20.845 4.071-20.845 12.281Z"/>
+                <path stroke="#000" stroke-linecap="round" stroke-width="6" d="M738 464v12m-24-12v12m127-12v12m-24-12v12"/>
+                <path fill="#707070" stroke="#000" stroke-width="6" d="M687 370v16h183v-16zm0-54v16h183v-16z"/>
+                <path fill="#D9D9D9" stroke="#000" stroke-width="6" d="M795 370h-28v16h28zm76-69h-16v95h16zm-172 0h-16v95h16z"/>
+                <rect width="74.266" height="52" x="-3" y="3" fill="#AF7128" stroke="#000" stroke-width="6" rx="26" transform="matrix(-1 0 0 1 732 316)"/>
+                <path fill="#494949" d="m323.749 728.949 12.392-12.694 157.087 153.35-12.392 12.694z"/>
+                <path fill="#494949" d="m468.695 876.651-11.898-13.158 162.83-147.237 11.899 13.158z"/>
+                <path fill="#6FB7D6" fill-opacity=".53" d="M415 372.657 643.398 213v159.657H415Z"/>
+                <path fill="#000" d="M59.871 212.892H95.35v656.367H59.871z"/>
+                <path fill="#000" d="M106.438 523.336v35.479H59.871v-35.479z"/>
+                <path fill="#FE1616" d="M59.871 212.892H95.35v35.479H59.871zm0 620.888H95.35v35.479H59.871z"/>
+                <ellipse cx="59.871" cy="539.966" fill="#FF2626" rx="59.871" ry="38.806"/>
+                <path fill="#5B5B5B" d="M106.438 441.29h53.219v199.571h-53.219z"/>
+                <path fill="#D9D9D9" fill-rule="evenodd" d="M1359.3 372.549H159.657v337.053H949.06l410.24-236.853v-100.2Z" clip-rule="evenodd"/>
+                <path fill="#8FA3B4" d="M281.617 408.028h263.877v263.877H281.617z"/>
+                <path fill="#FF0B0B" d="M192.919 709.602h443.492V798.3H192.919z"/>
+                <path fill="#FF0B0B" d="M192.919.016h443.492v88.698H192.919z"/>
+                <path fill="#FF0B0B" d="M1175.25 396.941h221.746v44.349H1175.25z"/>
+                <path fill="#F20000" d="M1301.65 212.892H1448l-90.92 159.657h-148.57l93.14-159.657Z"/>
+                <circle cx="476.754" cy="869.259" r="68.741" fill="#fff"/>
+                <path fill="#494949" d="M223.963 88.714h33.262v620.888h-33.262zm345.923 0h33.262v620.888h-33.262z"/>
+              </svg>
+            </span>
+          </span>
+          <svg aria-hidden="true" class="toggle__backdrop" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 290 228">
+            <g class="clouds"><path fill="#fff" d="M328 167.5c0 15.214-7.994 28.56-20.01 36.068.007.31.01.621.01.932 0 23.472-19.028 42.5-42.5 42.5-3.789 0-7.461-.496-10.957-1.426C249.671 263.676 233.141 277 213.5 277a42.77 42.77 0 0 1-7.702-.696C198.089 284.141 187.362 289 175.5 289a42.338 42.338 0 0 1-27.864-10.408A42.411 42.411 0 0 1 133.5 281c-4.36 0-8.566-.656-12.526-1.876C113.252 287.066 102.452 292 90.5 292a42.388 42.388 0 0 1-15.8-3.034A42.316 42.316 0 0 1 48.5 298C25.028 298 6 278.972 6 255.5S25.028 213 48.5 213a42.388 42.388 0 0 1 15.8 3.034A42.316 42.316 0 0 1 90.5 207c4.36 0 8.566.656 12.526 1.876C110.748 200.934 121.548 196 133.5 196a42.338 42.338 0 0 1 27.864 10.408A42.411 42.411 0 0 1 175.5 204c2.63 0 5.204.239 7.702.696C190.911 196.859 201.638 192 213.5 192c3.789 0 7.461.496 10.957 1.426 2.824-10.491 9.562-19.377 18.553-24.994-.007-.31-.01-.621-.01-.932 0-23.472 19.028-42.5 42.5-42.5s42.5 19.028 42.5 42.5Z"/></g>
+          </svg>
+          <span class="toggle__indicator-wrapper">
+            <span class="toggle__indicator">
+              <span class="toggle__star">
+                <span class="sun">
+                  <span class="moon">
+                    <span class="moon__crater"></span><span class="moon__crater"></span><span class="moon__crater"></span>
+                  </span>
+                </span>
+              </span>
+            </span>
+          </span>
+          <svg aria-hidden="true" class="toggle__backdrop" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 290 228">
+            <g><g class="stars">
+              <g><path fill="#fff" fill-rule="evenodd" d="M61 11.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.749 3.749 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.749 3.749 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813a3.749 3.749 0 0 0 2.576-2.576l.813-2.846A.75.75 0 0 1 61 11.5Z" clip-rule="evenodd"/></g>
+              <g><path fill="#fff" fill-rule="evenodd" d="M62.5 45.219a.329.329 0 0 1 .315.238l.356 1.245a1.641 1.641 0 0 0 1.127 1.127l1.245.356a.328.328 0 0 1 0 .63l-1.245.356a1.641 1.641 0 0 0-1.127 1.127l-.356 1.245a.328.328 0 0 1-.63 0l-.356-1.245a1.641 1.641 0 0 0-1.127-1.127l-1.245-.356a.328.328 0 0 1 0-.63l1.245-.356a1.641 1.641 0 0 0 1.127-1.127l.356-1.245a.328.328 0 0 1 .315-.238Z" clip-rule="evenodd"/></g>
+              <g><path fill="#fff" fill-rule="evenodd" d="M32 31.188a.28.28 0 0 1 .27.204l.305 1.067a1.405 1.405 0 0 0 .966.966l1.068.305a.28.28 0 0 1 0 .54l-1.068.305a1.405 1.405 0 0 0-.966.966l-.305 1.068a.28.28 0 0 1-.54 0l-.305-1.068a1.406 1.406 0 0 0-.966-.966l-1.067-.305a.28.28 0 0 1 0-.54l1.067-.305a1.406 1.406 0 0 0 .966-.966l.305-1.068a.281.281 0 0 1 .27-.203Z" clip-rule="evenodd"/></g>
+              <g><path fill="#fff" fill-rule="evenodd" d="M41.5 74.219a.329.329 0 0 1 .315.238l.356 1.245a1.641 1.641 0 0 0 1.127 1.127l1.245.356a.328.328 0 0 1 0 .63l-1.245.356a1.641 1.641 0 0 0-1.127 1.127l-.356 1.245a.328.328 0 0 1-.63 0l-.356-1.245a1.641 1.641 0 0 0-1.127-1.127l-1.245-.356a.328.328 0 0 1 0-.63l1.245-.356a1.641 1.641 0 0 0 1.127-1.127l.356-1.245a.328.328 0 0 1 .315-.238Z" clip-rule="evenodd"/></g>
+              <g><path fill="#fff" fill-rule="evenodd" d="M34 83.188a.28.28 0 0 1 .27.203l.305 1.068a1.405 1.405 0 0 0 .966.966l1.068.305a.28.28 0 0 1 0 .54l-1.068.305a1.405 1.405 0 0 0-.966.966l-.305 1.068a.28.28 0 0 1-.54 0l-.305-1.068a1.406 1.406 0 0 0-.966-.966l-1.068-.305a.28.28 0 0 1 0-.54l1.068-.305a1.406 1.406 0 0 0 .966-.966l.305-1.068a.281.281 0 0 1 .27-.204Z" clip-rule="evenodd"/></g>
+              <g><path fill="#fff" fill-rule="evenodd" d="M63 89.25a.375.375 0 0 1 .36.272l.407 1.423a1.874 1.874 0 0 0 1.288 1.288l1.423.406a.374.374 0 0 1 0 .722l-1.423.406a1.874 1.874 0 0 0-1.288 1.288l-.407 1.423a.374.374 0 0 1-.72 0l-.407-1.423a1.874 1.874 0 0 0-1.288-1.288l-1.423-.406a.374.374 0 0 1 0-.722l1.423-.406a1.874 1.874 0 0 0 1.288-1.288l.407-1.423a.376.376 0 0 1 .36-.272Z" clip-rule="evenodd"/></g>
+              <g><path fill="#fff" fill-rule="evenodd" d="M110.5 53.156a.236.236 0 0 1 .225.17l.254.89a1.174 1.174 0 0 0 .805.805l.89.254a.23.23 0 0 1 .122.084.233.233 0 0 1-.122.366l-.89.254a1.167 1.167 0 0 0-.805.805l-.254.89a.232.232 0 0 1-.225.17.235.235 0 0 1-.225-.17l-.254-.89a1.174 1.174 0 0 0-.805-.805l-.89-.254a.23.23 0 0 1-.122-.084.233.233 0 0 1 .122-.366l.89-.254a1.167 1.167 0 0 0 .805-.805l.254-.89a.232.232 0 0 1 .225-.17Z" clip-rule="evenodd"/></g>
+              <g><path fill="#fff" fill-rule="evenodd" d="M120 27.188a.279.279 0 0 1 .27.204l.305 1.067a1.41 1.41 0 0 0 .966.966l1.067.305a.283.283 0 0 1 .148.1.286.286 0 0 1 0 .34.283.283 0 0 1-.148.1l-1.067.305a1.403 1.403 0 0 0-.966.966l-.305 1.067a.279.279 0 0 1-.439.147.275.275 0 0 1-.101-.147l-.305-1.067a1.41 1.41 0 0 0-.966-.966l-1.068-.305a.284.284 0 0 1-.147-.1.286.286 0 0 1 0-.34.284.284 0 0 1 .147-.1l1.068-.305a1.405 1.405 0 0 0 .966-.966l.305-1.067a.279.279 0 0 1 .27-.204Z" clip-rule="evenodd"/></g>
+              <g><path fill="#fff" fill-rule="evenodd" d="M155 28.5a.753.753 0 0 1 .721.544l.813 2.846a3.746 3.746 0 0 0 2.576 2.576l2.846.813a.747.747 0 0 1 .543.721.75.75 0 0 1-.543.721l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.747.747 0 0 1-.721.543.749.749 0 0 1-.721-.543l-.813-2.846a3.746 3.746 0 0 0-2.576-2.576l-2.846-.813a.747.747 0 0 1-.543-.721.75.75 0 0 1 .543-.721l2.846-.813a3.75 3.75 0 0 0 2.576-2.576l.813-2.846A.751.751 0 0 1 155 28.5Z" clip-rule="evenodd"/></g>
+              <g><path fill="#fff" fill-rule="evenodd" d="M147 60.25a.377.377 0 0 1 .36.272l.407 1.423a1.883 1.883 0 0 0 1.288 1.288l1.423.407a.375.375 0 0 1 0 .72l-1.423.407a1.875 1.875 0 0 0-1.288 1.288l-.407 1.423a.371.371 0 0 1-.36.272.377.377 0 0 1-.36-.272l-.407-1.423a1.883 1.883 0 0 0-1.288-1.288l-1.423-.406a.375.375 0 0 1 0-.722l1.423-.406a1.875 1.875 0 0 0 1.288-1.288l.407-1.423a.372.372 0 0 1 .36-.272Z" clip-rule="evenodd"/></g>
+              <g><path fill="#fff" fill-rule="evenodd" d="M125.5 76.344a.513.513 0 0 1 .496.374l.559 1.956a2.574 2.574 0 0 0 1.771 1.771l1.956.56a.514.514 0 0 1 .27.805.514.514 0 0 1-.27.186l-1.956.559a2.57 2.57 0 0 0-1.771 1.77l-.559 1.957a.514.514 0 0 1-.806.27.514.514 0 0 1-.186-.27l-.559-1.956a2.574 2.574 0 0 0-1.771-1.771l-1.956-.56a.514.514 0 0 1-.27-.805.514.514 0 0 1 .27-.186l1.956-.559a2.57 2.57 0 0 0 1.771-1.77l.559-1.957a.515.515 0 0 1 .496-.374Z" clip-rule="evenodd"/></g>
+            </g></g>
+          </svg>
+          <span class="astrobear__container">
+            <span class="astrobear">
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 316 432">
+                <circle cx="158" cy="143" r="140" fill="#444"/>
+                <circle cx="158" cy="143" r="140" stroke="#000" stroke-width="6"/>
+                <path fill="#AF7128" fill-rule="evenodd" d="M65.98 159.61C49.913 155.643 38 141.134 38 123.842 38 103.495 54.495 87 74.842 87c14.337 0 26.761 8.19 32.85 20.146C119.687 100.674 133.414 97 148 97h20c14.52 0 28.19 3.641 40.146 10.059C214.251 95.15 226.65 87 240.952 87c20.347 0 36.842 16.495 36.842 36.842 0 17.222-11.818 31.685-27.787 35.72A85.104 85.104 0 0 1 253 182v66.56l10.054-10.054c11.325-11.325 29.687-11.325 41.012 0s11.325 29.687 0 41.012l-44.548 44.548a29.004 29.004 0 0 1-6.518 4.906V407c0 12.15-9.85 22-22 22h-44c-12.15 0-22-9.85-22-22v-28.69a41.072 41.072 0 0 1-14 .174V407c0 12.15-9.85 22-22 22H85c-12.15 0-22-9.85-22-22v-77.797a28.99 28.99 0 0 1-6.946-5.137l-44.548-44.548c-11.325-11.325-11.325-29.687 0-41.012 11.326-11.325 29.687-11.325 41.013 0L63 248.988V182a85.106 85.106 0 0 1 2.98-22.39Z" clip-rule="evenodd"/>
+                <path fill="#fff" fill-rule="evenodd" d="M267.721 234.712C241.49 266.061 202.073 286 158 286c-43.749 0-82.91-19.647-109.141-50.598-11.328-8.104-27.18-7.069-37.353 3.104-11.325 11.325-11.325 29.687 0 41.012l44.548 44.548A28.99 28.99 0 0 0 63 329.203V407c0 12.15 9.85 22 22 22h44c12.15 0 22-9.85 22-22v-28.517c2.123.341 4.293.517 6.5.517 2.555 0 5.06-.236 7.5-.69V407c0 12.15 9.85 22 22 22h44c12.15 0 22-9.85 22-22V328.972a29.004 29.004 0 0 0 6.518-4.906l44.548-44.548c11.325-11.325 11.325-29.687 0-41.012-9.875-9.875-25.099-11.139-36.345-3.794Z" clip-rule="evenodd"/>
+                <path fill="#FF1E1E" d="M113.322 154.665h88.371v13.25h-88.371z"/>
+                <path fill="#000" fill-rule="evenodd" d="M225.3 113.481c17.939 14.394 28.018 37.148 28.018 57.504H191.67c-.087-13.669-11.194-24.723-24.883-24.723h-18.56c-13.689 0-24.796 11.054-24.883 24.723H62c0-20.356 10.078-43.11 28.018-57.504C107.957 99.087 132.289 91 157.659 91c25.37 0 49.701 8.087 67.641 22.481Z" clip-rule="evenodd"/>
+                <circle cx="212.665" cy="197.079" r="8.079" fill="#000"/>
+                <circle cx="104.079" cy="197.079" r="8.079" fill="#000"/>
+                <path fill="#000" d="M179.165 211.683c0 8.21-9.868 17.451-20.845 17.451-10.977 0-20.845-9.241-20.845-17.451 0-8.211 9.868-12.281 20.845-12.281 10.977 0 20.845 4.07 20.845 12.281Z"/>
+                <path stroke="#000" stroke-linecap="round" stroke-width="6" d="M198 417v12M222 417v12M95 417v12M119 417v12"/>
+                <path fill="#F5D949" stroke="#000" stroke-width="6" d="m217.543 305.943.704 1.692 1.826.146 12.818 1.027h.001a.17.17 0 0 1 .059.011l.002.001a.147.147 0 0 1 .037.065.15.15 0 0 1 .008.075l-.001.002c0 .001-.01.017-.041.044h-.001l-9.765 8.365-1.391 1.192.425 1.782 2.981 12.506h.001c.009.04.008.058.008.06l-.001.002a.148.148 0 0 1-.05.056.146.146 0 0 1-.069.031h-.002c-.002-.001-.02-.005-.054-.026l-10.974-6.702-1.564-.955-1.564.955-10.974 6.702a.177.177 0 0 1-.053.025l-.002.001c-.004-.001-.032-.005-.069-.032a.146.146 0 0 1-.051-.056l-.001-.002s-.001-.018.008-.058l.001-.001 2.981-12.506.425-1.782-1.391-1.192-9.765-8.365h-.001c-.031-.027-.04-.043-.041-.044l-.001-.002a.15.15 0 0 1 .008-.075.147.147 0 0 1 .037-.065l.002-.001a.17.17 0 0 1 .059-.011h.001l12.818-1.027 1.826-.146.704-1.692 4.938-11.875a.161.161 0 0 1 .028-.051l.001-.001a.146.146 0 0 1 .076-.016c.047 0 .072.013.076.016l.001.001c.001 0 .012.013.028.051l4.938 11.875Z"/>
+                <path stroke="#000" stroke-linecap="round" stroke-width="16" d="M56.884 247.116A143.01 143.01 0 0 0 158 289a143.002 143.002 0 0 0 101.116-41.884"/>
+                <path stroke="#000" stroke-width="6" d="M65.035 404s25.382-6.618 41.965-6.5c17.059.121 43.035 7.5 43.035 7.5M164.012 403.977s25.961-5.606 42.932-5.472C224.402 398.642 251 405 251 405M25 290l7.769-4.072a57.001 57.001 0 0 0 25.067-26.121L62 251M254.363 252l3.867 7.873a57.002 57.002 0 0 0 25.452 25.746l8.694 4.394"/>
+              </svg>
+            </span>
+          </span>
+        </span>
+      </button>
+    </div>
 <main>
   <div class="grid" id="grid"></div>
   <div id="tools">
+
     <div class="themes"><span>Hintergrund</span><div id="themeList" role="group" aria-label="Hintergrund wählen"></div></div>
     <button type="button" id="doneBtn">✓ Fertig</button>
     <button type="button" id="splashBtn"></button>
@@ -583,7 +765,7 @@ function renderGrid(){
   grid.innerHTML='';
   if(folder&&!tiles.some(x=>x.id===folder))folder=null;
   const f=folder?tiles.find(x=>x.id===folder):null;
-  $('backBtn').hidden=!f;$('hTitle').textContent=f?f.name:'TheoBox';
+  $('backBtn').hidden=!f;if(f)$('hTitle').textContent=f.name;else $('hTitle').innerHTML='<span class="wm">Theo<em>Box</em></span>';
   const playingId=spotId||(cur&&!audio.paused?cur.tile.id:null)||(spNow&&spNow.state&&spNow.state.is_playing?spNow.tile.id:null);
   const playingParent=(tiles.find(x=>x.id===playingId)||{}).parent||null;
   const list=tiles.filter(t=>(t.parent||null)===folder);
@@ -934,10 +1116,20 @@ function applyTheme(k){
   skyMode(k==='nacht');
   document.querySelector('.sky-layer.s1').style.backgroundImage=STARS2;
   document.querySelector('.sky-layer.s2').style.backgroundImage=STARS3;
+  if(document.querySelector('#dayNight .toggle'))renderDayToggle();
   $('themeList').innerHTML=Object.entries(THEMES).map(([id,t])=>`<button type="button" data-t="${id}" style="--t:${t.sw}" aria-label="${t.label}" title="${t.label}" aria-pressed="${id===k}"></button>`).join('');
 }
+const dayToggle=document.querySelector('#dayNight .toggle');
+function renderDayToggle(){dayToggle.setAttribute('aria-pressed',loadJSON('hoerbox.theme','auto')==='nacht'?'true':'false')}
+dayToggle.addEventListener('click',()=>{
+  const nacht=dayToggle.getAttribute('aria-pressed')==='true';
+  if(nacht){const back=loadJSON('hoerbox.daytheme','auto');applyTheme(back);saveJSON('hoerbox.theme',back)}
+  else{saveJSON('hoerbox.daytheme',loadJSON('hoerbox.theme','auto'));applyTheme('nacht');saveJSON('hoerbox.theme','nacht')}
+  dayToggle.setAttribute('aria-pressed',nacht?'false':'true');
+  sfxPlay('klack',[520,330],.1,.16);
+});
 $('themeList').addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(!b)return;applyTheme(b.dataset.t);saveJSON('hoerbox.theme',theme)});
-applyTheme(theme);
+applyTheme(theme);renderDayToggle();
 
 /* Export / Import */
 const blobToData=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b)});
